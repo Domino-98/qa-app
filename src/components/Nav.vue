@@ -1,0 +1,76 @@
+<script setup></script>
+
+<template>
+  <header class="header">
+    <nav class="nav container">
+      <a href="#" class="nav__logo"
+        ><img class="nav__logo-icon" src="../assets/communication.png" />Q&A</a
+      >
+      <div class="nav__btns">
+        <a href="/" class="nav__btn">Strona główna</a>
+        <a href="#" class="nav__btn">Zadaj pytanie</a>
+        <a href="#" class="nav__btn">Zaloguj się</a>
+      </div>
+    </nav>
+  </header>
+</template>
+
+<style scoped>
+.header {
+  width: 100%;
+  background-color: #1a1e2b;
+}
+
+.nav {
+  width: 100%;
+  margin: auto;
+  display: flex;
+  padding: 1.5rem 3rem;
+}
+
+.nav__logo {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+  font-size: 2.5rem;
+  font-family: Oxygen, Helvetica, Arial, sans-serif;
+  color: #fff;
+  text-decoration: none;
+  /* text-shadow: 0px 4px 3px rgba(0, 0, 0, 0.4), 0px 8px 13px rgba(0, 0, 0, 0.1),
+    0px 18px 23px rgba(0, 0, 0, 0.1); */
+}
+
+.nav__logo-icon {
+  width: 4.5rem;
+  margin-right: 1rem;
+}
+
+.nav__btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav__btn {
+  color: #00a2ff;
+  font-size: 1.6rem;
+  border-radius: 1rem;
+  padding: 0.5rem 1.25rem;
+  font-weight: 400;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.nav__btn:not(:last-child) {
+  margin-right: 1rem;
+}
+
+.nav__btn:hover {
+  background-color: #00a2ff;
+  box-shadow: 0px 0.25rem 0.5rem #2e9ce566;
+  color: #fff;
+}
+</style>
