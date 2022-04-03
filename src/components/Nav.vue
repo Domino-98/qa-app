@@ -10,7 +10,9 @@
         <router-link :to="{ name: 'Home' }" class="nav__btn"
           >Strona główna</router-link
         >
-        <a href="#" class="nav__btn">Zadaj pytanie</a>
+        <router-link :to="{ name: 'AddQuestion' }" class="nav__btn"
+          >Zadaj pytanie</router-link
+        >
         <router-link :to="{ name: 'Login' }" class="nav__btn"
           >Zaloguj się</router-link
         >
@@ -22,7 +24,7 @@
 <style scoped>
 .header {
   width: 100%;
-  background-color: #1a1e2b;
+  background-color: #161b2c;
 }
 
 .nav {
