@@ -7,9 +7,13 @@
         ><img class="nav__logo-icon" src="../assets/communication.png" />Q&A</a
       >
       <div class="nav__btns">
-        <a href="/" class="nav__btn">Strona główna</a>
+        <router-link :to="{ name: 'Home' }" class="nav__btn"
+          >Strona główna</router-link
+        >
         <a href="#" class="nav__btn">Zadaj pytanie</a>
-        <a href="#" class="nav__btn">Zaloguj się</a>
+        <router-link :to="{ name: 'Login' }" class="nav__btn"
+          >Zaloguj się</router-link
+        >
       </div>
     </nav>
   </header>
@@ -56,7 +60,7 @@
   font-size: 1.6rem;
   border-radius: 1rem;
   padding: 0.5rem 1.25rem;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   border: none;
   text-decoration: none;
