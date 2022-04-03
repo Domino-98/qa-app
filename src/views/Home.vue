@@ -85,10 +85,12 @@
           </div>
           <div>
             <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <h2 class="questions__item-title">Pytanie 1 ?</h2>
-            <div class="questions__item-tags">
+            <p class="questions__item-title">Pytanie 1 ?</p>
+            <div class="questions__item-info">
               <a href="#" class="questions__item-tag">programowanie</a>
               <a href="#" class="questions__item-tag">vue</a>
+              <span class="questions__item-answers">5 odpowiedzi,</span>
+              <span class="questions__item-views">20 wyświetleń</span>
             </div>
           </div>
         </li>
@@ -123,10 +125,12 @@
           </div>
           <div>
             <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <h2 class="questions__item-title">Pytanie 2 ?</h2>
-            <div class="questions__item-tags">
+            <p class="questions__item-title">Pytanie 2 ?</p>
+            <div class="questions__item-info">
               <a href="#" class="questions__item-tag">programowanie</a>
               <a href="#" class="questions__item-tag">vue</a>
+              <span class="questions__item-answers">3 odpowiedzi,</span>
+              <span class="questions__item-views">20 wyświetleń</span>
             </div>
           </div>
         </li>
@@ -161,10 +165,13 @@
           </div>
           <div>
             <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <h2 class="questions__item-title">Pytanie 3 ?</h2>
-            <div class="questions__item-tags">
+            <p class="questions__item-title">Pytanie 3 ?</p>
+            <div class="questions__item-info">
               <a href="#" class="questions__item-tag">programowanie</a>
               <a href="#" class="questions__item-tag">vue</a>
+              <a href="#" class="questions__item-tag">js</a>
+              <span class="questions__item-answers">1 odpowiedź,</span>
+              <span class="questions__item-views">25 wyświetleń</span>
             </div>
           </div>
         </li>
@@ -247,7 +254,8 @@
 }
 
 .questions__header {
-  font-size: 1.8rem;
+  font-size: 2.4rem;
+  font-weight: 400;
 }
 
 .questions__list {
@@ -264,6 +272,7 @@
 
 .questions__item-title {
   font-size: 2rem;
+  font-weight: 400;
 }
 
 .questions__item-votes {
@@ -291,8 +300,12 @@
   color: #ff4444;
 }
 
-.questions__item-tags {
+.questions__item-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   margin-top: 1.25rem;
+  row-gap: 0.5rem;
 }
 
 .questions__item-tag {
@@ -307,5 +320,12 @@
 
 .questions-item-date {
   margin-bottom: 1.25rem;
+}
+
+.questions__item-answers,
+.questions__item-views {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 1.2em;
 }
 </style>

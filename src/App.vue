@@ -8,7 +8,7 @@ import AppNav from "../src/components/Nav.vue";
 </template>
 
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Merienda&family=Roboto:ital,wght@0,300;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap");
 
 *,
 *::before,
@@ -22,13 +22,13 @@ import AppNav from "../src/components/Nav.vue";
 html {
   box-sizing: border-box;
   font-size: 62.5%;
+  background-color: #eee;
 }
 
 #app {
   font-family: "Roboto", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #eee;
 }
 
 .container {
