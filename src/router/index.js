@@ -3,6 +3,7 @@ import Home from "../views/Home.vue";
 import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import AddQuestion from "../views/AddQuestion.vue";
+import Question from "../views/Question.vue";
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: "/add-question",
     name: "AddQuestion",
     component: AddQuestion,
+  },
+  {
+    path: "/question/:id",
+    name: "Question",
+    component: Question,
   },
 ];
 
