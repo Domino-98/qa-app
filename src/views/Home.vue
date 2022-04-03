@@ -1,7 +1,48 @@
-<script></script>
+<script setup>
+import { reactive } from "vue";
+
+const questions = reactive([
+  {
+    id: 1,
+    name: "Pytanie 1",
+    content:
+      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
+    tags: ["vue", "javascript", "programowanie"],
+    timestamp: "03.04.2022",
+    answer_count: 5,
+    view_count: 10,
+    score: 4,
+    owner_display_name: "Dominik",
+  },
+  {
+    id: 2,
+    name: "Pytanie 2",
+    content:
+      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
+    tags: ["vue", "supabase"],
+    timestamp: "02.04.2022",
+    answer_count: 3,
+    view_count: 5,
+    score: 11,
+    owner_display_name: "Paweł",
+  },
+  {
+    id: 3,
+    name: "Pytanie 3",
+    content:
+      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
+    tags: ["html", "css", "javascript"],
+    timestamp: "01.04.2022",
+    answer_count: 10,
+    view_count: 33,
+    score: -2,
+    owner_display_name: "Piotr",
+  },
+]);
+</script>
 
 <template>
-  <main class="container home">
+  <main class="container">
     <div class="filters">
       <button class="filters__btn active">
         <svg viewBox="0 0 24 24" class="filters__btn-icon">
@@ -35,7 +76,7 @@
           /></svg
         ><span class="filters__btn-text">Z największą liczbą głosów</span>
       </button>
-      <form class="filters_search-form">
+      <!-- <form class="filters_search-form">
         <input
           type="text"
           class="filters__search"
@@ -49,13 +90,17 @@
             />
           </svg>
         </button>
-      </form>
+      </form> -->
     </div>
 
     <section class="questions">
       <h1 class="questions__header">Pytania</h1>
       <ul class="questions__list">
-        <li class="questions__item">
+        <li
+          v-for="question in questions"
+          :key="question.id"
+          class="questions__item"
+        >
           <div class="questions__item-votes">
             <div>
               <svg
@@ -69,7 +114,7 @@
               </svg>
             </div>
             <div class="questions__item-votes-score">
-              <span>2</span>
+              <span>{{ question.score }}</span>
             </div>
             <div>
               <svg
@@ -84,94 +129,29 @@
             </div>
           </div>
           <div>
-            <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <p class="questions__item-title">Pytanie 1 ?</p>
+            <p class="questions__item-owner-date">
+              Zadane przez {{ question.owner_display_name }}, utworzono
+              {{ question.timestamp }}
+            </p>
+            <router-link
+              :to="`/question/${question.id}`"
+              class="questions__item-title"
+              >{{ question.name }}</router-link
+            >
             <div class="questions__item-info">
-              <a href="#" class="questions__item-tag">programowanie</a>
-              <a href="#" class="questions__item-tag">vue</a>
-              <span class="questions__item-answers">5 odpowiedzi,</span>
-              <span class="questions__item-views">20 wyświetleń</span>
-            </div>
-          </div>
-        </li>
-
-        <li class="questions__item">
-          <div class="questions__item-votes">
-            <div>
-              <svg
-                class="questions__item-votes-icon questions__item-votes-icon--up"
-                viewBox="0 0 24 24"
+              <a
+                v-for="tag in question.tags"
+                :key="tag"
+                href="#"
+                class="questions__item-tag"
+                >{{ tag }}</a
               >
-                <path
-                  fill="currentColor"
-                  d="M5,9V21H1V9H5M9,21A2,2 0 0,1 7,19V9C7,8.45 7.22,7.95 7.59,7.59L14.17,1L15.23,2.06C15.5,2.33 15.67,2.7 15.67,3.11L15.64,3.43L14.69,8H21C22.11,8 23,8.9 23,10V12C23,12.26 22.95,12.5 22.86,12.73L19.84,19.78C19.54,20.5 18.83,21 18,21H9M9,19H18.03L21,12V10H12.21L13.34,4.68L9,9.03V19Z"
-                />
-              </svg>
-            </div>
-            <div class="questions__item-votes-score">
-              <span>1</span>
-            </div>
-            <div>
-              <svg
-                class="questions__item-votes-icon questions__item-votes-icon--down"
-                viewBox="0 0 24 24"
+              <span class="questions__item-answers"
+                >{{ question.answer_count }} odpowiedzi,</span
               >
-                <path
-                  fill="currentColor"
-                  d="M19,15V3H23V15H19M15,3A2,2 0 0,1 17,5V15C17,15.55 16.78,16.05 16.41,16.41L9.83,23L8.77,21.94C8.5,21.67 8.33,21.3 8.33,20.88L8.36,20.57L9.31,16H3C1.89,16 1,15.1 1,14V12C1,11.74 1.05,11.5 1.14,11.27L4.16,4.22C4.46,3.5 5.17,3 6,3H15M15,5H5.97L3,12V14H11.78L10.65,19.32L15,14.97V5Z"
-                />
-              </svg>
-            </div>
-          </div>
-          <div>
-            <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <p class="questions__item-title">Pytanie 2 ?</p>
-            <div class="questions__item-info">
-              <a href="#" class="questions__item-tag">programowanie</a>
-              <a href="#" class="questions__item-tag">vue</a>
-              <span class="questions__item-answers">3 odpowiedzi,</span>
-              <span class="questions__item-views">20 wyświetleń</span>
-            </div>
-          </div>
-        </li>
-
-        <li class="questions__item">
-          <div class="questions__item-votes">
-            <div>
-              <svg
-                class="questions__item-votes-icon questions__item-votes-icon--up"
-                viewBox="0 0 24 24"
+              <span class="questions__item-views"
+                >{{ question.view_count }} wyświetleń</span
               >
-                <path
-                  fill="currentColor"
-                  d="M5,9V21H1V9H5M9,21A2,2 0 0,1 7,19V9C7,8.45 7.22,7.95 7.59,7.59L14.17,1L15.23,2.06C15.5,2.33 15.67,2.7 15.67,3.11L15.64,3.43L14.69,8H21C22.11,8 23,8.9 23,10V12C23,12.26 22.95,12.5 22.86,12.73L19.84,19.78C19.54,20.5 18.83,21 18,21H9M9,19H18.03L21,12V10H12.21L13.34,4.68L9,9.03V19Z"
-                />
-              </svg>
-            </div>
-            <div class="questions__item-votes-score">
-              <span>5</span>
-            </div>
-            <div>
-              <svg
-                class="questions__item-votes-icon questions__item-votes-icon--down"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M19,15V3H23V15H19M15,3A2,2 0 0,1 17,5V15C17,15.55 16.78,16.05 16.41,16.41L9.83,23L8.77,21.94C8.5,21.67 8.33,21.3 8.33,20.88L8.36,20.57L9.31,16H3C1.89,16 1,15.1 1,14V12C1,11.74 1.05,11.5 1.14,11.27L4.16,4.22C4.46,3.5 5.17,3 6,3H15M15,5H5.97L3,12V14H11.78L10.65,19.32L15,14.97V5Z"
-                />
-              </svg>
-            </div>
-          </div>
-          <div>
-            <p class="questions-item-date">Utworzono 02.04.2022</p>
-            <p class="questions__item-title">Pytanie 3 ?</p>
-            <div class="questions__item-info">
-              <a href="#" class="questions__item-tag">programowanie</a>
-              <a href="#" class="questions__item-tag">vue</a>
-              <a href="#" class="questions__item-tag">js</a>
-              <span class="questions__item-answers">1 odpowiedź,</span>
-              <span class="questions__item-views">25 wyświetleń</span>
             </div>
           </div>
         </li>
@@ -181,7 +161,7 @@
 </template>
 
 <style scoped>
-.home {
+main {
   min-height: 100vh;
   background-color: #fff;
   box-shadow: 5px 0 5px -5px rgba(0, 0, 0, 0.2),
@@ -207,8 +187,10 @@
 }
 
 .filters__btn {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   position: relative;
   padding: 2rem;
   border: none;
@@ -264,21 +246,19 @@
 .questions__item {
   display: flex;
   align-items: center;
-  cursor: pointer;
   padding: 2rem 0;
   list-style-type: none;
   border-bottom: 2px solid #eee;
 }
 
 .questions__item-title {
+  text-decoration: none;
+  color: #000;
   font-size: 2rem;
   font-weight: 400;
 }
 
 .questions__item-votes {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   margin-right: 2rem;
 }
 
@@ -293,9 +273,11 @@
   height: 2.5rem;
   cursor: pointer;
 }
+
 .questions__item-votes-icon--up {
   color: #48df48;
 }
+
 .questions__item-votes-icon--down {
   color: #ff4444;
 }
@@ -318,8 +300,10 @@
   font-size: 1.2rem;
 }
 
-.questions-item-date {
+.questions__item-owner-date {
+  color: #3f3f3f;
   margin-bottom: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .questions__item-answers,

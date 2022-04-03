@@ -31,7 +31,7 @@
   width: 100%;
   margin: auto;
   display: flex;
-  padding: 1.5rem 3rem;
+  padding: 1.5rem;
 }
 
 .nav__logo {

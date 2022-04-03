@@ -1,11 +1,13 @@
 <script setup>
 import { ref, reactive } from "vue";
+import { uid } from "uid";
 
 let tag = ref("");
 let newTag = "";
 let errorMsg = ref("");
 
-let question = reactive({
+const question = reactive({
+  id: uid(),
   name: "",
   content: "",
   tags: [],
@@ -13,6 +15,7 @@ let question = reactive({
   answer_count: 0,
   view_count: 0,
   score: 0,
+  owner_display_name: "Dominik",
 });
 
 function pushToTags() {
