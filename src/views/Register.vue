@@ -1,19 +1,49 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref } from "vue";
+import { useForm, useField } from "vee-validate";
+import * as yup from "yup";
 
-let passVisibleNew = ref(false);
+// Form validation
+const registerSchema = yup.object({
+  username: yup
+    .string()
+    .required("Nazwa użytkownika jest wymagana")
+    .min(3, "Nazwa użytkownika musi zawierać min. 3 znaki"),
+  email: yup
+    .string()
+    .required("Adres email jest wymagany")
+    .email("Podany adres email nie jest prawidłowy"),
+  password: yup
+    .string()
+    .required("Hasło jest wymagane")
+    .min(8, "Hasło musi zawierać min. 8 znaków"),
+  passwordConfirmation: yup
+    .string()
+    .required("Musisz potwierdzić hasło")
+    .oneOf([yup.ref("password"), null], "Hasła muszą być takie same"),
+});
+
+const { handleSubmit } = useForm({
+  validationSchema: registerSchema,
+});
+
+const { value: username, errorMessage: usernameError } = useField("username");
+const { value: email, errorMessage: emailError } = useField("email");
+const { value: password, errorMessage: passwordError } = useField("password");
+const { value: passwordConfirmation, errorMessage: passwordError2 } = useField(
+  "passwordConfirmation"
+);
+
+// Submit form
+const registerUser = handleSubmit((values) => {
+  const { username, email, password } = values;
+  console.log(values);
+  // Register user
+});
+
+// Password visibility
+let passVisible = ref(false);
 let passVisibleRepeat = ref(false);
-
-const user = {
-  username: "",
-  email: "",
-  password: "",
-  password2: "",
-};
-
-function registerUser() {
-  console.log(user);
-}
 </script>
 
 <template>
@@ -22,36 +52,28 @@ function registerUser() {
       <h1 class="form__signup-header">Zarejestruj się</h1>
       <div class="form__signup-group">
         <label for="" class="form__signup-label">Nazwa użytkownika</label>
-        <input
-          v-model="user.username"
-          type="text"
-          class="form__signup-input"
-          required
-        />
+        <input v-model="username" type="text" class="form__signup-input" />
+        <span class="error">{{ usernameError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="" class="form__signup-label">Adres e-mail</label>
-        <input
-          v-model="user.email"
-          type="email"
-          class="form__signup-input"
-          required
-        />
+        <input v-model="email" type="email" class="form__signup-input" />
+        <span class="error">{{ emailError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="password-new" class="form__signup-label">Hasło</label>
         <input
-          v-model="user.password"
-          :type="!passVisibleNew ? 'password' : 'text'"
+          v-model="password"
+          :type="!passVisible ? 'password' : 'text'"
           id="password-new"
           class="form__signup-input"
-          required
         />
+        <span class="error">{{ passwordError }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
-          @click.prevent="passVisibleNew = !passVisibleNew"
-          v-if="!passVisibleNew"
+          @click.prevent="passVisible = !passVisible"
+          v-if="!passVisible"
         >
           <path
             fill="currentColor"
@@ -61,8 +83,8 @@ function registerUser() {
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
-          @click.prevent="passVisibleNew = !passVisibleNew"
-          v-if="passVisibleNew"
+          @click.prevent="passVisible = !passVisible"
+          v-if="passVisible"
         >
           <path
             fill="currentColor"
@@ -75,12 +97,12 @@ function registerUser() {
           >Powtórz hasło</label
         >
         <input
-          v-model="user.password2"
+          v-model="passwordConfirmation"
           :type="!passVisibleRepeat ? 'password' : 'text'"
           id="password-repeat"
           class="form__signup-input"
-          required
         />
+        <span class="error">{{ passwordError2 }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
@@ -118,7 +140,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 5rem;
+  margin-top: 4rem;
 }
 
 .form__box {
@@ -214,5 +236,11 @@ main {
   text-decoration: none;
   color: #0084ff;
   font-weight: 700;
+}
+
+.error {
+  margin-top: 0.5rem;
+  color: #ff3b3b;
+  font-size: 1.2rem;
 }
 </style>

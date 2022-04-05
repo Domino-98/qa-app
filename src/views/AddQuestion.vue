@@ -1,10 +1,31 @@
 <script setup>
 import { ref, reactive } from "vue";
 import { uid } from "uid";
+import { useForm, useField } from "vee-validate";
+import * as yup from "yup";
 
-let tag = ref("");
-let newTag = "";
-let errorMsg = ref("");
+// Form validation
+const questionSchema = yup.object({
+  name: yup.string().required("Nazwa pytania jest wymagana"),
+  content: yup.string().required("Treść pytania jest wymagana"),
+});
+
+const { handleSubmit } = useForm({
+  validationSchema: questionSchema,
+});
+
+const { value: name, errorMessage: nameError } = useField("name");
+const { value: content, errorMessage: contentError } = useField("content");
+
+// Submit form
+const addQuestion = handleSubmit((values) => {
+  const { name, content } = values;
+  question.name = name;
+  question.content = content;
+  pushToTags();
+  console.log(question);
+  // Add question
+});
 
 const question = reactive({
   id: uid(),
@@ -17,6 +38,11 @@ const question = reactive({
   score: 0,
   owner_display_name: "Dominik",
 });
+
+// Add tags to question
+let tag = ref("");
+let newTag = "";
+let errorMsg = ref("");
 
 function pushToTags() {
   newTag = tag.value.trim();
@@ -36,11 +62,6 @@ function removeFromTags(tag) {
   question.tags.splice(tagToRemove, 1);
   console.log(question);
 }
-
-function addQuestion() {
-  pushToTags();
-  console.log(question);
-}
 </script>
 
 <template>
@@ -52,25 +73,25 @@ function addQuestion() {
           >Nazwa pytania</label
         >
         <input
-          v-model="question.name"
+          v-model="name"
           id="question-name"
           type="text"
           class="form__question-input"
-          required
         />
+        <span class="error">{{ nameError }}</span>
       </div>
       <div class="form__question-group">
         <label for="question-content" class="form__question-label"
           >Treść pytania</label
         >
         <textarea
-          v-model="question.content"
+          v-model="content"
           id="question-content"
           name="question-content"
           rows="5"
           class="form__question-content"
-          required
         ></textarea>
+        <span class="error">{{ contentError }}</span>
       </div>
       <div class="form__question-group">
         <label for="question-content" class="form__question-label"
@@ -83,7 +104,7 @@ function addQuestion() {
           v-model="tag"
           @keydown.space="pushToTags"
         />
-        <p class="error-msg" v-if="errorMsg">{{ errorMsg }}</p>
+        <p class="error" v-if="errorMsg">{{ errorMsg }}</p>
         <div class="form__question-tags">
           <a
             href="#"
@@ -107,7 +128,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 5rem;
+  margin-top: 4rem;
 }
 
 .form__question {
@@ -211,9 +232,9 @@ main {
   color: #fff;
 }
 
-.error-msg {
-  margin-top: 1rem;
+.error {
+  margin-top: 0.5rem;
+  color: #ff3b3b;
   font-size: 1.2rem;
-  color: #ff4a4a;
 }
 </style>

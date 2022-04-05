@@ -1,16 +1,33 @@
 <script setup>
 import { ref } from "vue";
+import { useForm, useField } from "vee-validate";
+import * as yup from "yup";
 
+// Form validation
+const loginSchema = yup.object({
+  email: yup
+    .string()
+    .required("Adres email jest wymagany")
+    .email("Podany adres email nie jest prawidłowy"),
+  password: yup.string().required("Hasło jest wymagane"),
+});
+
+const { handleSubmit } = useForm({
+  validationSchema: loginSchema,
+});
+
+const { value: email, errorMessage: emailError } = useField("email");
+const { value: password, errorMessage: passwordError } = useField("password");
+
+// Submit form
+const loginUser = handleSubmit((values) => {
+  const { email, password } = values;
+  console.log(values);
+  // Login user
+});
+
+// Password visibility
 let passVisible = ref(false);
-
-const user = {
-  email: "",
-  password: "",
-};
-
-function loginUser() {
-  console.log(user);
-}
 </script>
 
 <template>
@@ -20,22 +37,22 @@ function loginUser() {
       <div class="form__signup-group">
         <label for="email" class="form__signup-label">Adres e-mail</label>
         <input
-          v-model="user.email"
+          v-model="email"
           id="email"
           type="email"
           class="form__signup-input"
-          required
         />
+        <span class="error">{{ emailError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="password" class="form__signup-label">Hasło</label>
         <input
-          v-model="user.password"
+          v-model="password"
           :type="!passVisible ? 'password' : 'text'"
           id="password"
           class="form__signup-input"
-          required
         />
+        <span class="error">{{ passwordError }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
@@ -74,7 +91,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 5rem;
+  margin-top: 4rem;
 }
 
 .form__box {
@@ -170,5 +187,11 @@ main {
   text-decoration: none;
   color: #0084ff;
   font-weight: 700;
+}
+
+.error {
+  margin-top: 0.5rem;
+  color: #ff3b3b;
+  font-size: 1.2rem;
 }
 </style>
