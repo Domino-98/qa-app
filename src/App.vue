@@ -1,9 +1,17 @@
 <script setup>
 import AppNav from "../src/components/Nav.vue";
+import { computed } from "vue";
+import { useStore } from "vuex";
+
+const store = useStore();
+const success = computed(() => store.state.successMsg);
 </script>
 
 <template>
   <AppNav />
+  <Transition>
+    <p v-if="success" class="success-msg">{{ success }}</p>
+  </Transition>
   <router-view></router-view>
 </template>
 
@@ -34,5 +42,30 @@ html {
 .container {
   max-width: 100rem;
   margin: auto;
+}
+
+.success-msg {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  width: auto;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  margin: 0 auto;
+  font-size: 1.6rem;
+  background-color: #2cdd2c;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
 }
 </style>

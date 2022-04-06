@@ -1,7 +1,10 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
+import { useStore } from "vuex";
+import Loading from "vue-loading-overlay";
+import "vue-loading-overlay/dist/vue-loading.css";
 
 // Form validation
 const registerSchema = yup.object({
@@ -34,11 +37,19 @@ const { value: passwordConfirmation, errorMessage: passwordError2 } = useField(
   "passwordConfirmation"
 );
 
+// Register user
+const store = useStore();
+onMounted(() => {
+  store.commit("errorMsg", "");
+});
+const loading = computed(() => store.state.loading);
+const error = computed(() => store.state.errorMsg);
+
 // Submit form
 const registerUser = handleSubmit((values) => {
   const { username, email, password } = values;
   console.log(values);
-  // Register user
+  store.dispatch("signUpAction", { username, email, password });
 });
 
 // Password visibility
@@ -49,7 +60,14 @@ let passVisibleRepeat = ref(false);
 <template>
   <main class="container">
     <form class="form__box" @submit.prevent="registerUser">
+      <Loading
+        v-model:active="loading"
+        :can-cancel="false"
+        :is-full-page="true"
+      />
       <h1 class="form__signup-header">Zarejestruj się</h1>
+      <div v-if="error" class="error-supabase">{{ error }}</div>
+      <!-- <div v-if="loading">TRWA REJESTRACJA</div> -->
       <div class="form__signup-group">
         <label for="" class="form__signup-label">Nazwa użytkownika</label>
         <input v-model="username" type="text" class="form__signup-input" />
@@ -242,5 +260,15 @@ main {
   margin-top: 0.5rem;
   color: #ff3b3b;
   font-size: 1.2rem;
+}
+
+.error-supabase {
+  margin-top: 0.5rem;
+  text-align: center;
+  width: 100%;
+  padding: 1rem 2rem;
+  background-color: #ff3b3b;
+  color: #fff;
+  font-size: 1.6rem;
 }
 </style>

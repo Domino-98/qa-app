@@ -1,4 +1,17 @@
-<script setup></script>
+<script setup>
+import { computed } from "vue";
+import { supabase } from "../supabase/supabase";
+import { useStore } from "vuex";
+
+const store = useStore();
+
+const user = computed(() => store.state.user);
+
+function signOut() {
+  store.dispatch("signOutAction");
+  console.log(user);
+}
+</script>
 
 <template>
   <header class="header">
@@ -13,8 +26,11 @@
         <router-link :to="{ name: 'AddQuestion' }" class="nav__btn"
           >Zadaj pytanie</router-link
         >
-        <router-link :to="{ name: 'Login' }" class="nav__btn"
+        <router-link v-if="!user" :to="{ name: 'Login' }" class="nav__btn"
           >Zaloguj się</router-link
+        >
+        <a v-if="user" href="#" class="nav__btn" @click.prevent="signOut"
+          >Wyloguj się</a
         >
       </div>
     </nav>

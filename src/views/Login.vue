@@ -1,7 +1,10 @@
 <script setup>
-import { ref } from "vue";
-import { useForm, useField } from "vee-validate";
+import { ref, computed, onMounted } from "vue";
+import { useForm, useField, useResetForm } from "vee-validate";
 import * as yup from "yup";
+import { useStore } from "vuex";
+import Loading from "vue-loading-overlay";
+import "vue-loading-overlay/dist/vue-loading.css";
 
 // Form validation
 const loginSchema = yup.object({
@@ -19,11 +22,19 @@ const { handleSubmit } = useForm({
 const { value: email, errorMessage: emailError } = useField("email");
 const { value: password, errorMessage: passwordError } = useField("password");
 
+const store = useStore();
+onMounted(() => {
+  store.commit("errorMsg", "");
+});
+const loading = computed(() => store.state.loading);
+const error = computed(() => store.state.errorMsg);
+
 // Submit form
 const loginUser = handleSubmit((values) => {
   const { email, password } = values;
   console.log(values);
   // Login user
+  store.dispatch("signInAction", { email, password });
 });
 
 // Password visibility
@@ -33,7 +44,13 @@ let passVisible = ref(false);
 <template>
   <main class="container">
     <form class="form__box" @submit.prevent="loginUser">
+      <Loading
+        v-model:active="loading"
+        :can-cancel="false"
+        :is-full-page="true"
+      />
       <h1 class="form__signup-header">Zaloguj się</h1>
+      <div v-if="error" class="error-supabase">{{ error }}</div>
       <div class="form__signup-group">
         <label for="email" class="form__signup-label">Adres e-mail</label>
         <input
@@ -76,7 +93,7 @@ let passVisible = ref(false);
           />
         </svg>
       </div>
-      <a href="#" class="form__signup-forgot">Zapomniałeś hasła?</a>
+      <!-- <a href="#" class="form__signup-forgot">Zapomniałeś hasła?</a> -->
       <button type="Submit" class="form__signup-btn">Zaloguj się</button>
       <p class="form__signup-register">
         Nie masz konta?
@@ -193,5 +210,15 @@ main {
   margin-top: 0.5rem;
   color: #ff3b3b;
   font-size: 1.2rem;
+}
+
+.error-supabase {
+  margin-top: 0.5rem;
+  text-align: center;
+  width: 100%;
+  padding: 1rem 2rem;
+  background-color: #ff3b3b;
+  color: #fff;
+  font-size: 1.6rem;
 }
 </style>
