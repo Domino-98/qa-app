@@ -1,44 +1,50 @@
 <script setup>
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
+import { supabase } from "../supabase/supabase";
 
-const questions = reactive([
-  {
-    id: 1,
-    name: "Pytanie 1",
-    content:
-      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    tags: ["vue", "javascript", "programowanie"],
-    timestamp: "03.04.2022",
-    answer_count: 5,
-    view_count: 10,
-    score: 4,
-    owner_display_name: "Dominik",
-  },
-  {
-    id: 2,
-    name: "Pytanie 2",
-    content:
-      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    tags: ["vue", "supabase"],
-    timestamp: "02.04.2022",
-    answer_count: 3,
-    view_count: 5,
-    score: 11,
-    owner_display_name: "Paweł",
-  },
-  {
-    id: 3,
-    name: "Pytanie 3",
-    content:
-      "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    tags: ["html", "css", "javascript"],
-    timestamp: "01.04.2022",
-    answer_count: 10,
-    view_count: 33,
-    score: -2,
-    owner_display_name: "Piotr",
-  },
-]);
+const questions = ref([]);
+
+async function getQuestions() {
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .select()
+      .order("created_at", { ascending: false });
+    questions.value = data;
+    console.log(questions);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+getQuestions();
+
+function timeSince(date) {
+  var seconds = Math.floor((new Date() - date) / 1000);
+
+  var interval = seconds / 31536000;
+
+  if (interval > 1) {
+    return Math.floor(interval) + " lata";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " miesięcy";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " dni";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " godzin";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " minut";
+  }
+  return Math.floor(seconds) + " sekund";
+}
 </script>
 
 <template>
@@ -95,6 +101,7 @@ const questions = reactive([
 
     <section class="questions">
       <h1 class="questions__header">Pytania</h1>
+      <p v-if="questions.length === 0" class="info">Brak pytań</p>
       <ul class="questions__list">
         <li
           v-for="question in questions"
@@ -130,8 +137,18 @@ const questions = reactive([
           </div>
           <div>
             <p class="questions__item-owner-date">
-              Zadane przez {{ question.owner_display_name }}, utworzono
-              {{ question.timestamp }}
+              Zadane przez {{ question.owner_display_name }}
+              {{
+                timeSince(
+                  new Date(
+                    Date.now() -
+                      (new Date().getTime() -
+                        new Date(question.created_at).getTime())
+                  )
+                )
+              }}
+              temu, {{ new Date(question.created_at).toLocaleDateString() }},
+              {{ new Date(question.created_at).toLocaleTimeString() }}
             </p>
             <router-link
               :to="`/question/${question.id}`"
@@ -311,5 +328,13 @@ main {
   display: inline-block;
   margin-right: 0.5rem;
   font-size: 1.2em;
+}
+
+.info {
+  text-align: center;
+  margin-top: 2.5rem;
+  font-size: 1.6rem;
+  font-style: italic;
+  color: #3f3f3f;
 }
 </style>

@@ -73,7 +73,7 @@ export default createStore({
         };
         let { error } = await supabase.from("users").upsert(updates);
         if (error) {
-          commit("errorMsg", "Użytkownik o podanej nazwie już istnieje");
+          commit("errorMsg", error);
           commit("loading", false);
           throw error;
         }

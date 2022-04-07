@@ -1,43 +1,78 @@
 <script setup>
 import { useRoute } from "vue-router";
-import { ref, reactive, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 import { uid } from "uid";
+import { supabase } from "../supabase/supabase";
 
 const route = useRoute();
-
 const questionId = route.params.id;
+
+const question = ref({});
+const canEdit = ref();
+
+async function getQuestion() {
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .select()
+      .eq("id", route.params.id)
+      .single();
+    question.value = data;
+    canEdit.value = question.value.owner_user_id === supabase.auth.user().id;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+getQuestion();
+
+function timeSince(date) {
+  var seconds = Math.floor((new Date() - date) / 1000);
+
+  var interval = seconds / 31536000;
+
+  if (interval > 1) {
+    return Math.floor(interval) + " lata";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " miesięcy";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " dni";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " godzin";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " minut";
+  }
+  return Math.floor(seconds) + " sekund";
+}
 
 const answer = reactive({
   id: uid(),
   content: "",
-  timestamp: new Date(),
+  created_at: new Date(),
   score: 0,
   user_display_name: "Dominik",
 });
 
+// Submit form
 function addAnswer() {
   console.log(answer);
+  // Add answer
 }
-
-const question = reactive({
-  id: 1,
-  name: "Pytanie 1",
-  content:
-    "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-  tags: ["vue", "javascript", "programowanie"],
-  timestamp: "03.04.2022",
-  answer_count: 5,
-  view_count: 10,
-  score: 4,
-  owner_display_name: "Dominik",
-});
 
 const answers = reactive([
   {
     id: 1,
     content:
       "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.? Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    timestamp: "03.04.2022",
+    created_at: "03.04.2022",
     score: 3,
     user_display_name: "Krzysztof",
   },
@@ -45,7 +80,7 @@ const answers = reactive([
     id: 2,
     content:
       "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.? Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    timestamp: "03.04.2022",
+    created_at: "03.04.2022",
     score: 10,
     user_display_name: "Dominoo",
   },
@@ -53,7 +88,7 @@ const answers = reactive([
     id: 3,
     content:
       "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.? Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores, dolorem.?",
-    timestamp: "03.04.2022",
+    created_at: "03.04.2022",
     score: -3,
     user_display_name: "Buczek",
   },
@@ -64,6 +99,24 @@ const answers = reactive([
   <main class="container">
     <div class="question">
       <div class="question__item">
+        <div v-if="canEdit" class="question__buttons">
+          <button class="question__edit" title="Edytuj pytanie">
+            <svg viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M11 20V22H3C1.9 22 1 21.1 1 20V4C1 2.9 1.9 2 3 2H21C22.1 2 23 2.9 23 4V12.1L22.8 11.9C22.3 11.4 21.7 11.1 21 11.1V6H3V20H11M21.4 13.3L22.7 14.6C22.9 14.8 22.9 15.2 22.7 15.4L21.7 16.4L19.6 14.3L20.6 13.3C20.7 13.2 20.8 13.1 21 13.1C21.2 13.1 21.3 13.2 21.4 13.3M21.1 16.9L15.1 23H13V20.9L19.1 14.8L21.1 16.9Z"
+              />
+            </svg>
+          </button>
+          <button class="question__delete" title="Usuń pytanie">
+            <svg viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+              />
+            </svg>
+          </button>
+        </div>
         <div class="question__item-votes">
           <div>
             <svg
@@ -93,8 +146,18 @@ const answers = reactive([
         </div>
         <div>
           <p class="question__owner-date">
-            Zadane przez {{ question.owner_display_name }}, utworzono
-            {{ question.timestamp }}
+            Zadane przez {{ question.owner_display_name }}
+            {{
+              timeSince(
+                new Date(
+                  Date.now() -
+                    (new Date().getTime() -
+                      new Date(question.created_at).getTime())
+                )
+              )
+            }}
+            temu, {{ new Date(question.created_at).toLocaleDateString() }},
+            {{ new Date(question.created_at).toLocaleTimeString() }}
           </p>
           <h1 class="question__title">{{ question.name }}</h1>
           <div class="question__info">
@@ -116,7 +179,7 @@ const answers = reactive([
       </div>
 
       <div class="question__content">
-        <p>{{ question.content }}</p>
+        <p style="white-space: pre-wrap">{{ question.content }}</p>
       </div>
     </div>
 
@@ -181,7 +244,7 @@ const answers = reactive([
             <div class="answers__info">
               <p>
                 Odpowiedź dodana przez {{ answer.user_display_name }} dnia
-                {{ answer.timestamp }}
+                {{ answer.created_at }}
               </p>
             </div>
           </div>
@@ -213,7 +276,7 @@ main {
 }
 
 .question__item {
-  clear: both;
+  position: relative;
   display: flex;
   align-items: center;
   padding: 2rem 0;
@@ -414,5 +477,25 @@ main {
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 5px solid #aaa;
+}
+
+.question__buttons {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.question__edit,
+.question__delete {
+  width: 4rem;
+  height: 4rem;
+  margin-left: 1rem;
+  border: none;
+  padding: 1rem;
+  color: #000;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
+    rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
 }
 </style>

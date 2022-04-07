@@ -1,8 +1,13 @@
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import { uid } from "uid";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
+import { useStore } from "vuex";
+import { supabase } from "../supabase/supabase";
+import router from "../router/index";
+
+const store = useStore();
 
 // Form validation
 const questionSchema = yup.object({
@@ -17,26 +22,64 @@ const { handleSubmit } = useForm({
 const { value: name, errorMessage: nameError } = useField("name");
 const { value: content, errorMessage: contentError } = useField("content");
 
-// Submit form
-const addQuestion = handleSubmit((values) => {
-  const { name, content } = values;
-  question.name = name;
-  question.content = content;
-  pushToTags();
-  console.log(question);
-  // Add question
-});
+const user = supabase.auth.user();
+let username = ref("");
+
+async function getUser() {
+  const { data, error } = await supabase
+    .from("users")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  username = data.username;
+}
+
+getUser();
 
 const question = reactive({
   id: uid(),
   name: "",
   content: "",
   tags: [],
-  timestamp: new Date(),
+  created_at: new Date(),
   answer_count: 0,
   view_count: 0,
   score: 0,
-  owner_display_name: "Dominik",
+  owner_display_name: "",
+});
+
+// Submit form
+const addQuestion = handleSubmit(async (values) => {
+  const { name, content } = values;
+  question.name = name;
+  question.content = content;
+  pushToTags();
+  console.log(question);
+
+  // Add question
+  try {
+    const { error } = await supabase.from("questions").insert([
+      {
+        owner_user_id: user.id,
+        name: question.name,
+        content: question.content,
+        tags: question.tags,
+        created_at: question.created_at,
+        answer_count: question.answer_count,
+        view_count: question.view_count,
+        score: question.score,
+        owner_display_name: username,
+      },
+    ]);
+    await router.push("/");
+    store.commit("successMsg", "Pomyślnie dodano pytanie!");
+    setTimeout(() => {
+      store.commit("successMsg", "");
+    }, 3000);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // Add tags to question
