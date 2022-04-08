@@ -8,10 +8,19 @@ async function getQuestions() {
   try {
     const { data, error } = await supabase
       .from("questions")
-      .select()
+      .select(
+        `
+		*,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  id
+		  )
+	  `
+      )
       .order("created_at", { ascending: false });
     questions.value = data;
-    console.log(questions);
   } catch (error) {
     console.log(error);
   }
@@ -136,7 +145,15 @@ function timeSince(date) {
             </div>
           </div>
           <div>
-            <p class="questions__item-owner-date">
+            <router-link
+              tag="p"
+              :to="{
+                name: 'Question',
+                hash: '#question',
+                params: { id: question.id },
+              }"
+              class="questions__item-owner-date"
+            >
               Zadane przez {{ question.owner_display_name }}
               {{
                 timeSince(
@@ -149,9 +166,12 @@ function timeSince(date) {
               }}
               temu, {{ new Date(question.created_at).toLocaleDateString() }},
               {{ new Date(question.created_at).toLocaleTimeString() }}
-            </p>
+            </router-link>
             <router-link
-              :to="`/question/${question.id}`"
+              :to="{
+                name: 'Question',
+                params: { id: question.id },
+              }"
               class="questions__item-title"
               >{{ question.name }}</router-link
             >
@@ -161,14 +181,29 @@ function timeSince(date) {
                 :key="tag"
                 href="#"
                 class="questions__item-tag"
-                >{{ tag }}</a
+                >{{ tag || "Brak tagu" }}</a
               >
-              <span class="questions__item-answers"
-                >{{ question.answer_count }} odpowiedzi,</span
+              <router-link
+                v-if="question.answers"
+                tag="span"
+                :to="{
+                  name: 'Question',
+                  params: { id: question.id },
+                }"
+                class="questions__item-answers"
+                >{{ question.answers.length }} odpowiedzi,</router-link
               >
-              <span class="questions__item-views"
-                >{{ question.view_count }} wyświetleń</span
+              <router-link
+                v-if="question.views[0]"
+                tag="span"
+                :to="{
+                  name: 'Question',
+                  params: { id: question.id },
+                }"
+                class="questions__item-views"
+                >{{ question.views[0].view_count }} wyświetleń</router-link
               >
+              <span v-else class="questions__item-views">0 wyświetleń</span>
             </div>
           </div>
         </li>
@@ -318,6 +353,8 @@ main {
 }
 
 .questions__item-owner-date {
+  display: block;
+  text-decoration: none;
   color: #3f3f3f;
   margin-bottom: 1.25rem;
   font-size: 1.1rem;
@@ -326,6 +363,8 @@ main {
 .questions__item-answers,
 .questions__item-views {
   display: inline-block;
+  text-decoration: none;
+  color: #000;
   margin-right: 0.5rem;
   font-size: 1.2em;
 }

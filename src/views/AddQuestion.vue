@@ -25,17 +25,17 @@ const { value: content, errorMessage: contentError } = useField("content");
 const user = supabase.auth.user();
 let username = ref("");
 
-async function getUser() {
+async function getUsername() {
   const { data, error } = await supabase
     .from("users")
     .select("username")
     .eq("id", user.id)
     .single();
 
-  username = data.username;
+  username.value = data.username;
 }
 
-getUser();
+getUsername();
 
 const question = reactive({
   id: uid(),
@@ -43,7 +43,6 @@ const question = reactive({
   content: "",
   tags: [],
   created_at: new Date(),
-  answer_count: 0,
   view_count: 0,
   score: 0,
   owner_display_name: "",
@@ -57,26 +56,38 @@ const addQuestion = handleSubmit(async (values) => {
   pushToTags();
   console.log(question);
 
+  let addedQuestion = ref({});
+
   // Add question
   try {
-    const { error } = await supabase.from("questions").insert([
+    const { error, data } = await supabase.from("questions").insert([
       {
         owner_user_id: user.id,
         name: question.name,
         content: question.content,
         tags: question.tags,
         created_at: question.created_at,
-        answer_count: question.answer_count,
-        view_count: question.view_count,
         score: question.score,
-        owner_display_name: username,
+        owner_display_name: username.value,
       },
     ]);
+    addedQuestion.value = data;
     await router.push("/");
     store.commit("successMsg", "Pomyślnie dodano pytanie!");
     setTimeout(() => {
       store.commit("successMsg", "");
     }, 3000);
+  } catch (error) {
+    console.log(error);
+  }
+  try {
+    console.log(addedQuestion.value);
+    const { error, data } = await supabase.from("views").insert([
+      {
+        question_id: addedQuestion.value[0].id,
+        view_count: 0,
+      },
+    ]);
   } catch (error) {
     console.log(error);
   }
