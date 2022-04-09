@@ -1,5 +1,6 @@
 import { createStore } from "vuex";
 import createPersistedState from "vuex-persistedstate";
+import Cookies from "js-cookie";
 import router from "../router/index";
 import { supabase } from "../supabase/supabase";
 
@@ -39,7 +40,8 @@ export default createStore({
           throw error;
         }
         await router.push("/");
-        commit("setUser", user.email);
+        commit("setUser", user);
+        console.log(user);
         commit("successMsg", "Pomyślnie zalogowano!");
         setTimeout(() => {
           commit("successMsg", "");
@@ -100,6 +102,12 @@ export default createStore({
   modules: {},
   plugins: [
     createPersistedState({
+      storage: {
+        getItem: (key) => Cookies.get(key),
+        setItem: (key, value) =>
+          Cookies.set(key, value, { expires: 3, secure: true }),
+        removeItem: (key) => Cookies.remove(key),
+      },
       paths: ["user"],
     }),
   ],
