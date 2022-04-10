@@ -132,7 +132,7 @@ function removeFromTags(tag) {
           type="text"
           class="form__question-input"
         />
-        <span class="error">{{ nameError }}</span>
+        <span class="error-msg">{{ nameError }}</span>
       </div>
       <div class="form__question-group">
         <label for="question-content" class="form__question-label"
@@ -145,7 +145,7 @@ function removeFromTags(tag) {
           rows="5"
           class="form__question-content"
         ></textarea>
-        <span class="error">{{ contentError }}</span>
+        <span class="error-msg">{{ contentError }}</span>
       </div>
       <div class="form__question-group">
         <label for="question-content" class="form__question-label"
@@ -158,7 +158,7 @@ function removeFromTags(tag) {
           v-model="tag"
           @keydown.space="pushToTags"
         />
-        <p class="error" v-if="errorMsg">{{ errorMsg }}</p>
+        <p class="error-msg" v-if="errorMsg">{{ errorMsg }}</p>
         <div class="form__question-tags">
           <a
             href="#"
@@ -286,7 +286,7 @@ main {
   color: #fff;
 }
 
-.error {
+.error-msg {
   margin-top: 0.5rem;
   color: #ff3b3b;
   font-size: 1.2rem;

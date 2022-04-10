@@ -5,12 +5,16 @@ import { useStore } from "vuex";
 
 const store = useStore();
 const success = computed(() => store.state.successMsg);
+const error = computed(() => store.state.errorMsg);
 </script>
 
 <template>
   <AppNav />
   <Transition>
-    <p v-if="success" class="success-msg">{{ success }}</p>
+    <p v-if="success" class="msg success">{{ success }}</p>
+  </Transition>
+  <Transition>
+    <p v-if="error" class="msg error">{{ error }}</p>
   </Transition>
   <router-view></router-view>
 </template>
@@ -44,7 +48,7 @@ html {
   margin: auto;
 }
 
-.success-msg {
+.msg {
   position: fixed;
   bottom: 2.5rem;
   left: 50%;
@@ -53,15 +57,22 @@ html {
   transform: translate(-50%, -50%);
   margin: 0 auto;
   font-size: 1.6rem;
-  background-color: #2cdd2c;
   color: #fff;
   padding: 1rem 2rem;
   border-radius: 0.5rem;
 }
 
+.success {
+  background-color: #28cf28;
+}
+
+.error {
+  background-color: #ff3a3a;
+}
+
 .v-enter-active,
 .v-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity 0.3s ease;
 }
 
 .v-enter-from,

@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from "vue";
-import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
 
 const store = useStore();
@@ -10,6 +9,13 @@ const user = computed(() => store.state.user);
 function signOut() {
   store.dispatch("signOutAction");
   console.log(user);
+}
+
+function displayError() {
+  store.commit("errorMsg", "Musisz być zalogowany by móc dodać pytanie!");
+  setTimeout(() => {
+    store.commit("errorMsg", "");
+  }, 3000);
 }
 </script>
 
@@ -23,7 +29,10 @@ function signOut() {
         <router-link :to="{ name: 'Home' }" class="nav__btn"
           >Strona główna</router-link
         >
-        <router-link :to="{ name: 'AddQuestion' }" class="nav__btn"
+        <router-link
+          @click.prevent="!user ? displayError() : null"
+          :to="{ name: 'AddQuestion' }"
+          class="nav__btn"
           >Zadaj pytanie</router-link
         >
         <router-link v-if="!user" :to="{ name: 'Login' }" class="nav__btn"
@@ -41,6 +50,7 @@ function signOut() {
 .header {
   width: 100%;
   background-color: #161b2c;
+  z-index: 10;
 }
 
 .nav {

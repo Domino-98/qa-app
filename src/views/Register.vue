@@ -66,17 +66,16 @@ let passVisibleRepeat = ref(false);
         :is-full-page="true"
       />
       <h1 class="form__signup-header">Zarejestruj się</h1>
-      <div v-if="error" class="error-supabase">{{ error }}</div>
-      <!-- <div v-if="loading">TRWA REJESTRACJA</div> -->
+
       <div class="form__signup-group">
         <label for="" class="form__signup-label">Nazwa użytkownika</label>
         <input v-model="username" type="text" class="form__signup-input" />
-        <span class="error">{{ usernameError }}</span>
+        <span class="error-msg">{{ usernameError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="" class="form__signup-label">Adres e-mail</label>
         <input v-model="email" type="email" class="form__signup-input" />
-        <span class="error">{{ emailError }}</span>
+        <span class="error-msg">{{ emailError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="password-new" class="form__signup-label">Hasło</label>
@@ -86,7 +85,7 @@ let passVisibleRepeat = ref(false);
           id="password-new"
           class="form__signup-input"
         />
-        <span class="error">{{ passwordError }}</span>
+        <span class="error-msg">{{ passwordError }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
@@ -120,7 +119,7 @@ let passVisibleRepeat = ref(false);
           id="password-repeat"
           class="form__signup-input"
         />
-        <span class="error">{{ passwordError2 }}</span>
+        <span class="error-msg">{{ passwordError2 }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
@@ -256,19 +255,9 @@ main {
   font-weight: 700;
 }
 
-.error {
+.error-msg {
   margin-top: 0.5rem;
-  color: #ff3b3b;
+  color: #ff3a3a;
   font-size: 1.2rem;
-}
-
-.error-supabase {
-  margin-top: 0.5rem;
-  text-align: center;
-  width: 100%;
-  padding: 1rem 2rem;
-  background-color: #ff3b3b;
-  color: #fff;
-  font-size: 1.6rem;
 }
 </style>

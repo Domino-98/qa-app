@@ -36,6 +36,9 @@ export default createStore({
         });
         if (error) {
           commit("errorMsg", error.message);
+          setTimeout(() => {
+            commit("errorMsg", "");
+          }, 5000);
           commit("loading", false);
           throw error;
         }
@@ -53,6 +56,31 @@ export default createStore({
     },
     async signUpAction({ dispatch, commit }, form) {
       commit("loading", true);
+      // Check if username already exists
+      try {
+        const { data: username, error } = await supabase
+          .from("users")
+          .select("username")
+          .eq("username", form.username)
+          .single();
+
+        console.log(username);
+        if (username) {
+          commit("errorMsg", "Podana nazwa użytkownika już istnieje!");
+          setTimeout(() => {
+            commit("errorMsg", "");
+          }, 5000);
+          commit("loading", false);
+          return;
+        }
+        if (error) {
+          commit("errorMsg", error.msg);
+          throw error;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      // Sign up new user
       try {
         const { error } = await supabase.auth.signUp({
           email: form.email,
@@ -60,6 +88,9 @@ export default createStore({
         });
         if (error) {
           commit("errorMsg", error.message);
+          setTimeout(() => {
+            commit("errorMsg", "");
+          }, 5000);
           commit("loading", false);
           throw error;
         }
@@ -79,6 +110,7 @@ export default createStore({
           commit("loading", false);
           throw error;
         }
+        // Sign in new user
         await dispatch("signInAction", form);
       } catch (error) {
         console.log(error);

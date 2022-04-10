@@ -50,7 +50,6 @@ let passVisible = ref(false);
         :is-full-page="true"
       />
       <h1 class="form__signup-header">Zaloguj się</h1>
-      <div v-if="error" class="error-supabase">{{ error }}</div>
       <div class="form__signup-group">
         <label for="email" class="form__signup-label">Adres e-mail</label>
         <input
@@ -59,7 +58,7 @@ let passVisible = ref(false);
           type="email"
           class="form__signup-input"
         />
-        <span class="error">{{ emailError }}</span>
+        <span class="error-msg">{{ emailError }}</span>
       </div>
       <div class="form__signup-group">
         <label for="password" class="form__signup-label">Hasło</label>
@@ -69,7 +68,7 @@ let passVisible = ref(false);
           id="password"
           class="form__signup-input"
         />
-        <span class="error">{{ passwordError }}</span>
+        <span class="error-msg">{{ passwordError }}</span>
         <svg
           class="form__signup-icon"
           viewBox="0 0 24 24"
@@ -206,19 +205,9 @@ main {
   font-weight: 700;
 }
 
-.error {
+.error-msg {
   margin-top: 0.5rem;
-  color: #ff3b3b;
+  color: #ff3a3a;
   font-size: 1.2rem;
-}
-
-.error-supabase {
-  margin-top: 0.5rem;
-  text-align: center;
-  width: 100%;
-  padding: 1rem 2rem;
-  background-color: #ff3b3b;
-  color: #fff;
-  font-size: 1.6rem;
 }
 </style>
