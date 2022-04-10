@@ -1,7 +1,7 @@
 <script setup>
 import { useRoute } from "vue-router";
 import router from "../router/index";
-import { reactive, ref, onMounted, watch } from "vue";
+import { reactive, ref, computed, onMounted, watch } from "vue";
 import { uid } from "uid";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
@@ -12,8 +12,11 @@ onMounted(() => {
 
 const store = useStore();
 const route = useRoute();
+const user = supabase.auth.user();
 
 const question = ref({});
+const answers = ref([]);
+
 const canEditQuestion = ref();
 const canEditAnswer = ref();
 
@@ -29,39 +32,69 @@ async function incrementViews() {
 
 incrementViews();
 
-let viewCount = ref();
-
-async function getViews() {
-  try {
-    const { data, error } = await supabase
-      .from("views")
-      .select()
-      .eq("question_id", route.params.id)
-      .single();
-
-    viewCount.value = data.view_count;
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-getViews();
-
 async function getQuestion() {
   try {
     const { data, error } = await supabase
       .from("questions")
-      .select()
+      .select(
+        `
+		*,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  id
+		  ),
+		  votes_question (
+			  *
+		  )
+	  `
+      )
       .eq("id", route.params.id)
       .single();
     question.value = data;
-    canEditQuestion.value = question.value.owner_user_id === user.id;
+    question.value.views = data.views[0].view_count;
+
+    updateQuestionUpvote();
+
+    if (user) canEditQuestion.value = question.value.owner_user_id === user.id;
+
+    console.log(question.value);
   } catch (error) {
     console.log(error);
   }
 }
 
 getQuestion();
+
+function updateQuestionUpvote() {
+  question.value.downvotes = question.value.votes_question.filter(
+    (obj) => obj.downvoted === true
+  ).length;
+  question.value.upvotes = question.value.votes_question.filter(
+    (obj) => obj.upvoted === true
+  ).length;
+  question.value.score = question.value.upvotes - question.value.downvotes;
+  if (user) {
+    let foundUpvoted = question.value.votes_question.find(
+      (el) => el.upvoted === true && el.user_id === user.id
+    );
+    if (!foundUpvoted) {
+      question.value.upvoted = false;
+    } else {
+      question.value.upvoted = true;
+    }
+
+    let foundDownvoted = question.value.votes_question.find(
+      (el) => el.downvoted === true && el.user_id === user.id
+    );
+    if (!foundDownvoted) {
+      question.value.downvoted = false;
+    } else {
+      question.value.downvoted = true;
+    }
+  }
+}
 
 // Edit mode
 let editModeQuestion = ref(false);
@@ -111,7 +144,7 @@ async function editQuestion() {
       })
       .match({ id: route.params.id })
       .eq("owner_user_id", user.id);
-    store.commit("successMsg", "Pomyślnie zaktualizowano pytanie!");
+    store.commit("successMsg", "Pytanie zostało zedytowane!");
     setTimeout(() => {
       store.commit("successMsg", "");
     }, 3000);
@@ -133,6 +166,30 @@ let deleteModal = ref(false);
 
 async function deleteQuestion() {
   deleteModal.value = false;
+  // Delete answer votes
+  try {
+    const { data, error } = await supabase
+      .from("votes_answer")
+      .delete()
+      .eq("question_id", route.params.id);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  // Delete question votes
+  try {
+    const { data, error } = await supabase
+      .from("votes_question")
+      .delete()
+      .eq("question_id", route.params.id);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.log(error);
+  }
   // Delete answers
   try {
     const { data, error } = await supabase
@@ -140,8 +197,6 @@ async function deleteQuestion() {
       .delete()
       .eq("question_id", route.params.id);
     if (error) {
-      store.commit("errorMsg", error.message);
-      store.commit("loading", false);
       throw error;
     }
   } catch (error) {
@@ -154,8 +209,6 @@ async function deleteQuestion() {
       .delete()
       .eq("question_id", route.params.id);
     if (error) {
-      store.commit("errorMsg", error.message);
-      store.commit("loading", false);
       throw error;
     }
   } catch (error) {
@@ -170,8 +223,6 @@ async function deleteQuestion() {
       .eq("owner_user_id", user.id);
     deleteModal.value = false;
     if (error) {
-      store.commit("errorMsg", error.message);
-      store.commit("loading", false);
       throw error;
     }
     await router.push("/");
@@ -181,6 +232,456 @@ async function deleteQuestion() {
     }, 3000);
   } catch (error) {
     console.log(error);
+  }
+}
+
+const answer = reactive({
+  id: uid(),
+  content: "",
+  created_at: new Date(),
+  score: 0,
+  count: 0,
+  owner_display_name: "",
+});
+
+const username = ref("");
+
+// Get current username
+async function getUsername() {
+  if (user) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+
+    username.value = data.username;
+  }
+}
+
+getUsername();
+
+// Submit form
+async function addAnswer() {
+  if (!user) {
+    store.commit("errorMsg", "Musisz być zalogowany by móc dodać odpowiedź!");
+    setTimeout(() => {
+      store.commit("errorMsg", "");
+    }, 3000);
+  } else {
+    // Add answer
+    try {
+      const { error } = await supabase.from("answers").insert([
+        {
+          user_id: user.id,
+          question_id: route.params.id,
+          created_at: answer.created_at,
+          content: answer.content,
+          score: answer.score,
+          user_display_name: username.value,
+        },
+      ]);
+      getAnswers();
+      answer.content = "";
+      console.log(answer.content);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+// Get answers
+async function getAnswers() {
+  try {
+    const { data, error } = await supabase
+      .from("answers")
+      .select(
+        `
+		*,
+		  votes_answer (
+			  *
+		  )
+	  `
+      )
+      .order("created_at", { ascending: false })
+      .eq("question_id", route.params.id);
+    answers.value = data;
+    console.log(answers.value);
+
+    updateAnswerUpvotes();
+
+    answers.value.forEach((answer) => {
+      answer.editMode = false;
+      console.log(answers.value);
+    });
+
+    if (user) {
+      answers.value.forEach((answer) => {
+        if (answer.user_id == user.id) {
+          answer.editable = true;
+        }
+      });
+    }
+
+    console.log(answers.value);
+  } catch (error) {
+    console.log(error);
+  }
+  try {
+    const { error, data, count } = await supabase
+      .from("answers")
+      .select("*", { count: "exact" })
+      .eq("question_id", route.params.id);
+
+    answer.count = count;
+    answer.content = "";
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+getAnswers();
+
+// Edit answer
+async function editAnswer(answerId, answerContent) {
+  try {
+    const { data, error } = await supabase
+      .from("answers")
+      .update({
+        content: answerContent,
+      })
+      .match({ id: answerId });
+    store.commit("successMsg", "Odpowiedź została zedytowana!");
+    setTimeout(() => {
+      store.commit("successMsg", "");
+    }, 3000);
+    answers.value.forEach((answer) => {
+      if (answer.id === answerId) {
+        return (answer.editMode = !answer.editMode);
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// Delete answer
+async function deleteAnswer(answerId) {
+  try {
+    const { data, error } = await supabase
+      .from("answers")
+      .delete()
+      .eq("id", answerId);
+    if (error) {
+      store.commit("errorMsg", error.message);
+      store.commit("loading", false);
+      throw error;
+    }
+    store.commit("successMsg", "Odpowiedź została usunięta!");
+    setTimeout(() => {
+      store.commit("successMsg", "");
+    }, 3000);
+    getAnswers();
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// Display vote error
+function displayVoteError(voteType, target) {
+  if (!user && voteType == "question") {
+    store.commit(
+      "errorMsg",
+      "Musisz być zalogowany by móc zagłosować na pytanie!"
+    );
+  } else if (!user && voteType == "answer") {
+    store.commit(
+      "errorMsg",
+      "Musisz być zalogowany by móc zagłosować na odpowiedź!"
+    );
+  } else if (target.owner_user_id == user.id && voteType == "question") {
+    store.commit("errorMsg", "Nie możesz głosować na swoje pytania!");
+  } else if (target.user_id == user.id && voteType == "answer") {
+    store.commit("errorMsg", "Nie możesz głosować na swoje odpowiedzi!");
+  }
+  setTimeout(() => {
+    store.commit("errorMsg", "");
+  }, 3000);
+}
+
+// Upvote question
+async function upvoteQuestion() {
+  displayVoteError("question", question.value);
+  if (user && question.value.owner_user_id != user.id) {
+    try {
+      const { data: upvoted, error } = await supabase
+        .from("votes_question")
+        .select("upvoted")
+        .is("upvoted", true)
+        .match({ question_id: route.params.id, user_id: user.id });
+
+      if (upvoted[0]) {
+        try {
+          const { error, data } = await supabase.from("votes_question").upsert(
+            {
+              question_id: route.params.id,
+              user_id: user.id,
+              upvoted: false,
+            },
+            { onConflict: "question_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          question.value.upvoted = false;
+          question.value.score--;
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        try {
+          const { error, data } = await supabase.from("votes_question").upsert(
+            {
+              question_id: route.params.id,
+              user_id: user.id,
+              upvoted: true,
+              downvoted: false,
+            },
+            { onConflict: "question_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          if (question.value.downvoted) {
+            question.value.score += 2;
+          } else {
+            question.value.score++;
+          }
+          question.value.upvoted = true;
+          question.value.downvoted = false;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+// Downvote question
+async function downvoteQuestion() {
+  displayVoteError("question", question.value);
+  if (user && question.value.owner_user_id != user.id) {
+    try {
+      const { data: downvoted, error } = await supabase
+        .from("votes_question")
+        .select("downvoted")
+        .is("downvoted", true)
+        .match({ question_id: route.params.id, user_id: user.id });
+
+      if (downvoted[0]) {
+        try {
+          const { error, data } = await supabase.from("votes_question").upsert(
+            {
+              question_id: route.params.id,
+              user_id: user.id,
+              downvoted: false,
+            },
+            { onConflict: "question_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          question.value.downvoted = false;
+          question.value.score++;
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        try {
+          const { error, data } = await supabase.from("votes_question").upsert(
+            {
+              question_id: route.params.id,
+              user_id: user.id,
+              downvoted: true,
+              upvoted: false,
+            },
+            { onConflict: "question_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          if (question.value.upvoted) {
+            question.value.score -= 2;
+          } else {
+            question.value.score--;
+          }
+          question.value.downvoted = true;
+          question.value.upvoted = false;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+// Update answer upvotes
+function updateAnswerUpvotes() {
+  answers.value.forEach((answer) => {
+    answer.downvotes = answer.votes_answer.filter(
+      (obj) => obj.downvoted === true
+    ).length;
+    answer.upvotes = answer.votes_answer.filter(
+      (obj) => obj.upvoted === true
+    ).length;
+    answer.score = answer.upvotes - answer.downvotes;
+    if (user) {
+      let foundUpvoted = answer.votes_answer.find(
+        (el) => el.upvoted === true && el.user_id === user.id
+      );
+      if (!foundUpvoted) {
+        answer.upvoted = false;
+      } else {
+        answer.upvoted = true;
+      }
+      let foundDownvoted = answer.votes_answer.find(
+        (el) => el.downvoted === true && el.user_id === user.id
+      );
+      if (!foundDownvoted) {
+        answer.downvoted = false;
+      } else {
+        answer.downvoted = true;
+      }
+    }
+  });
+}
+
+// Upvote answer
+async function upvoteAnswer(answer) {
+  displayVoteError("answer", answer);
+  if (user && answer.user_id != user.id) {
+    try {
+      const { data: upvoted, error } = await supabase
+        .from("votes_answer")
+        .select("upvoted")
+        .is("upvoted", true)
+        .match({ answer_id: answer.id, user_id: user.id });
+
+      if (upvoted[0]) {
+        try {
+          const { error, data } = await supabase.from("votes_answer").upsert(
+            {
+              answer_id: answer.id,
+              user_id: user.id,
+              question_id: route.params.id,
+              upvoted: false,
+            },
+            { onConflict: "answer_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          answer.upvoted = false;
+          answer.score--;
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        try {
+          const { error, data } = await supabase.from("votes_answer").upsert(
+            {
+              answer_id: answer.id,
+              user_id: user.id,
+              question_id: route.params.id,
+              upvoted: true,
+              downvoted: false,
+            },
+            { onConflict: "answer_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          if (answer.downvoted) {
+            answer.score += 2;
+          } else {
+            answer.score++;
+          }
+          answer.upvoted = true;
+          answer.downvoted = false;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+// Downvote answers
+
+async function downvoteAnswer(answer) {
+  displayVoteError("answer", answer);
+  if (user && answer.user_id != user.id) {
+    try {
+      const { data: downvoted, error } = await supabase
+        .from("votes_answer")
+        .select("downvoted")
+        .is("downvoted", true)
+        .match({ answer_id: answer.id, user_id: user.id });
+
+      if (downvoted[0]) {
+        try {
+          const { error, data } = await supabase.from("votes_answer").upsert(
+            {
+              answer_id: answer.id,
+              user_id: user.id,
+              question_id: route.params.id,
+              downvoted: false,
+            },
+            { onConflict: "answer_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          answer.downvoted = false;
+          answer.score++;
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        try {
+          const { error, data } = await supabase.from("votes_answer").upsert(
+            {
+              answer_id: answer.id,
+              user_id: user.id,
+              question_id: route.params.id,
+              downvoted: true,
+              upvoted: false,
+            },
+            { onConflict: "answer_id,user_id" }
+          );
+          if (error) {
+            console.log(error);
+          }
+          if (answer.upvoted) {
+            answer.score -= 2;
+          } else {
+            answer.score--;
+          }
+          answer.downvoted = true;
+          answer.upvoted = false;
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
 
@@ -210,140 +711,6 @@ function timeSince(date) {
   }
   return Math.floor(seconds) + " sekund";
 }
-
-const answer = reactive({
-  id: uid(),
-  content: "",
-  created_at: new Date(),
-  score: 0,
-  count: 0,
-  owner_display_name: "",
-});
-
-const user = supabase.auth.user();
-const username = ref("");
-
-// Get current username
-async function getUsername() {
-  const { data, error } = await supabase
-    .from("users")
-    .select("username")
-    .eq("id", user.id)
-    .single();
-
-  username.value = data.username;
-}
-
-getUsername();
-
-// Submit form
-async function addAnswer() {
-  console.log(answer);
-  // Add answer
-  try {
-    const { error } = await supabase.from("answers").insert([
-      {
-        user_id: user.id,
-        question_id: route.params.id,
-        created_at: answer.created_at,
-        content: answer.content,
-        score: answer.score,
-        user_display_name: username.value,
-      },
-    ]);
-    getAnswers();
-    answer.content = "";
-    console.log(answer.content);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-// Get answers
-async function getAnswers() {
-  try {
-    const { data, error } = await supabase
-      .from("answers")
-      .select()
-      .order("created_at", { ascending: false })
-      .eq("question_id", route.params.id);
-    answers.value = data;
-    answers.value.forEach((answer) => {
-      answer.editMode = false;
-      console.log(answers.value);
-    });
-
-    answers.value.forEach((answer) => {
-      if (answer.user_id == user.id) {
-        answer.editable = true;
-      }
-    });
-    console.log(answers.value);
-  } catch (error) {
-    console.log(error);
-  }
-  try {
-    const { error, data, count } = await supabase
-      .from("answers")
-      .select("*", { count: "exact" })
-      .eq("question_id", route.params.id);
-
-    answer.count = count;
-    answer.content = "";
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-getAnswers();
-
-// Edit answer
-async function editAnswer(answerId, answerContent) {
-  try {
-    const { data, error } = await supabase
-      .from("answers")
-      .update({
-        content: answerContent,
-      })
-      .match({ id: answerId });
-    store.commit("successMsg", "Pomyślnie zaktualizowano odpowiedź!");
-    setTimeout(() => {
-      store.commit("successMsg", "");
-    }, 3000);
-    answers.value.forEach((answer) => {
-      if (answer.id === answerId) {
-        return (answer.editMode = !answer.editMode);
-      }
-    });
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-// Delete answer
-async function deleteAnswer(answerId) {
-  // Delete answer
-  try {
-    const { data, error } = await supabase
-      .from("answers")
-      .delete()
-      .eq("id", answerId);
-    if (error) {
-      store.commit("errorMsg", error.message);
-      store.commit("loading", false);
-      throw error;
-    }
-    store.commit("successMsg", "Odpowiedź została usunięta!");
-    setTimeout(() => {
-      store.commit("successMsg", "");
-    }, 3000);
-    getAnswers();
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-const answers = ref([]);
 </script>
 
 <template>
@@ -409,6 +776,8 @@ const answers = ref([]);
           <div class="question__item-votes">
             <div>
               <svg
+                v-if="!question.upvoted"
+                @click.prevent="upvoteQuestion"
                 class="question__item-votes-icon question__item-votes-icon--up"
                 viewBox="0 0 24 24"
               >
@@ -417,12 +786,25 @@ const answers = ref([]);
                   d="M5,9V21H1V9H5M9,21A2,2 0 0,1 7,19V9C7,8.45 7.22,7.95 7.59,7.59L14.17,1L15.23,2.06C15.5,2.33 15.67,2.7 15.67,3.11L15.64,3.43L14.69,8H21C22.11,8 23,8.9 23,10V12C23,12.26 22.95,12.5 22.86,12.73L19.84,19.78C19.54,20.5 18.83,21 18,21H9M9,19H18.03L21,12V10H12.21L13.34,4.68L9,9.03V19Z"
                 />
               </svg>
+              <svg
+                v-else
+                @click.prevent="upvoteQuestion"
+                class="question__item-votes-icon question__item-votes-icon--up"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M23,10C23,8.89 22.1,8 21,8H14.68L15.64,3.43C15.66,3.33 15.67,3.22 15.67,3.11C15.67,2.7 15.5,2.32 15.23,2.05L14.17,1L7.59,7.58C7.22,7.95 7,8.45 7,9V19A2,2 0 0,0 9,21H18C18.83,21 19.54,20.5 19.84,19.78L22.86,12.73C22.95,12.5 23,12.26 23,12V10M1,21H5V9H1V21Z"
+                />
+              </svg>
             </div>
             <div class="question__item-votes-score">
               <span>{{ question.score }}</span>
             </div>
             <div>
               <svg
+                v-if="!question.downvoted"
+                @click.prevent="downvoteQuestion"
                 class="question__item-votes-icon question__item-votes-icon--down"
                 viewBox="0 0 24 24"
               >
@@ -431,12 +813,26 @@ const answers = ref([]);
                   d="M19,15V3H23V15H19M15,3A2,2 0 0,1 17,5V15C17,15.55 16.78,16.05 16.41,16.41L9.83,23L8.77,21.94C8.5,21.67 8.33,21.3 8.33,20.88L8.36,20.57L9.31,16H3C1.89,16 1,15.1 1,14V12C1,11.74 1.05,11.5 1.14,11.27L4.16,4.22C4.46,3.5 5.17,3 6,3H15M15,5H5.97L3,12V14H11.78L10.65,19.32L15,14.97V5Z"
                 />
               </svg>
+              <svg
+                v-else
+                @click.prevent="downvoteQuestion"
+                class="question__item-votes-icon question__item-votes-icon--down"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M19,15H23V3H19M15,3H6C5.17,3 4.46,3.5 4.16,4.22L1.14,11.27C1.05,11.5 1,11.74 1,12V14A2,2 0 0,0 3,16H9.31L8.36,20.57C8.34,20.67 8.33,20.77 8.33,20.88C8.33,21.3 8.5,21.67 8.77,21.94L9.83,23L16.41,16.41C16.78,16.05 17,15.55 17,15V5C17,3.89 16.1,3 15,3Z"
+                />
+              </svg>
             </div>
           </div>
 
           <div>
             <p class="question__owner-date">
-              Zadane przez {{ question.owner_display_name }}
+              Zadane przez
+              <span class="display-name">{{
+                question.owner_display_name
+              }}</span>
               {{
                 timeSince(
                   new Date(
@@ -482,7 +878,9 @@ const answers = ref([]);
               <span class="question__answers"
                 >{{ answer.count }} odpowiedzi,</span
               >
-              <span class="question__views">{{ viewCount }} wyświetleń</span>
+              <span class="question__views"
+                >{{ question.views }} wyświetleń</span
+              >
             </div>
           </div>
         </div>
@@ -510,7 +908,10 @@ const answers = ref([]);
 
     <section class="answers">
       <form @submit.prevent="addAnswer" class="answers__add">
-        <label class="answers__label" for="answer">Treść odpowiedzi</label>
+        <label class="answers__label" for="answer"
+          >Treść odpowiedzi
+          <span v-show="!user">(Musisz być zalogowany)</span></label
+        >
         <textarea
           v-model="answer.content"
           class="answers__input"
@@ -538,6 +939,8 @@ const answers = ref([]);
           <div class="answers__item-votes">
             <div>
               <svg
+                v-if="!answer.upvoted"
+                @click.prevent="upvoteAnswer(answer)"
                 class="answers__item-votes-icon answers__item-votes-icon--up"
                 viewBox="0 0 24 24"
               >
@@ -546,18 +949,42 @@ const answers = ref([]);
                   d="M5,9V21H1V9H5M9,21A2,2 0 0,1 7,19V9C7,8.45 7.22,7.95 7.59,7.59L14.17,1L15.23,2.06C15.5,2.33 15.67,2.7 15.67,3.11L15.64,3.43L14.69,8H21C22.11,8 23,8.9 23,10V12C23,12.26 22.95,12.5 22.86,12.73L19.84,19.78C19.54,20.5 18.83,21 18,21H9M9,19H18.03L21,12V10H12.21L13.34,4.68L9,9.03V19Z"
                 />
               </svg>
+              <svg
+                v-else
+                @click.prevent="upvoteAnswer(answer)"
+                class="answers__item-votes-icon answers__item-votes-icon--up"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M23,10C23,8.89 22.1,8 21,8H14.68L15.64,3.43C15.66,3.33 15.67,3.22 15.67,3.11C15.67,2.7 15.5,2.32 15.23,2.05L14.17,1L7.59,7.58C7.22,7.95 7,8.45 7,9V19A2,2 0 0,0 9,21H18C18.83,21 19.54,20.5 19.84,19.78L22.86,12.73C22.95,12.5 23,12.26 23,12V10M1,21H5V9H1V21Z"
+                />
+              </svg>
             </div>
             <div class="answers__item-votes-score">
               <span>{{ answer.score }}</span>
             </div>
             <div>
               <svg
+                v-if="!answer.downvoted"
+                @click.prevent="downvoteAnswer(answer)"
                 class="answers__item-votes-icon answers__item-votes-icon--down"
                 viewBox="0 0 24 24"
               >
                 <path
                   fill="currentColor"
                   d="M19,15V3H23V15H19M15,3A2,2 0 0,1 17,5V15C17,15.55 16.78,16.05 16.41,16.41L9.83,23L8.77,21.94C8.5,21.67 8.33,21.3 8.33,20.88L8.36,20.57L9.31,16H3C1.89,16 1,15.1 1,14V12C1,11.74 1.05,11.5 1.14,11.27L4.16,4.22C4.46,3.5 5.17,3 6,3H15M15,5H5.97L3,12V14H11.78L10.65,19.32L15,14.97V5Z"
+                />
+              </svg>
+              <svg
+                v-else
+                @click.prevent="downvoteAnswer(answer)"
+                class="answers__item-votes-icon answers__item-votes-icon--down"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M19,15H23V3H19M15,3H6C5.17,3 4.46,3.5 4.16,4.22L1.14,11.27C1.05,11.5 1,11.74 1,12V14A2,2 0 0,0 3,16H9.31L8.36,20.57C8.34,20.67 8.33,20.77 8.33,20.88C8.33,21.3 8.5,21.67 8.77,21.94L9.83,23L16.41,16.41C16.78,16.05 17,15.55 17,15V5C17,3.89 16.1,3 15,3Z"
                 />
               </svg>
             </div>
@@ -613,7 +1040,8 @@ const answers = ref([]);
                 </button>
               </div>
               <p>
-                Odpowiedź dodana przez {{ answer.user_display_name }}
+                Odpowiedź dodana przez
+                <span class="display-name">{{ answer.user_display_name }}</span>
                 {{
                   timeSince(
                     new Date(
@@ -684,17 +1112,11 @@ main {
 
 .question__item-votes-icon--up,
 .answers__item-votes-icon--up {
-  color: #48df48;
+  color: #28cf28;
 }
 .question__item-votes-icon--down,
 .answers__item-votes-icon--down {
-  color: #ff4444;
-}
-
-.question__owner-date {
-  color: #3f3f3f;
-  margin-bottom: 1.25rem;
-  font-size: 1.1rem;
+  color: #ff3a3a;
 }
 
 .question__title {
@@ -756,10 +1178,20 @@ main {
   padding-right: 11.25rem;
 }
 
+.question__owner-date {
+  margin-bottom: 1.25rem;
+  color: #3f3f3f;
+  font-size: 1.2rem;
+}
+
 .answers__info {
-  margin-top: 1.25rem;
   color: #3f3f3f;
   font-size: 1.1rem;
+  margin-top: 1.25rem;
+}
+
+.display-name {
+  color: #00a2ff;
 }
 
 .answers__filter {
@@ -931,7 +1363,7 @@ main {
 .question__btn-edit,
 .answers__btn-edit {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   border: 2px solid #0084ff;
   background-color: #0084ff;
   color: #fff;
