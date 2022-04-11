@@ -114,19 +114,20 @@ main {
   width: 100%;
   max-width: 45rem;
   padding: 3rem;
-  background-color: #fff;
+  background-color: var(--background-color-secondary);
   border-radius: 1rem;
   box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px;
+  transition: background-color 0.2s;
 }
 
 .form__signup-header {
   font-size: 2.6rem;
   font-weight: 400;
+  color: var(--text-primary-color);
 }
 
 .form__signup-group {
   position: relative;
-  background-color: #fff;
   display: flex;
   flex-direction: column;
   margin: 1.5rem 0;
@@ -148,7 +149,8 @@ main {
   padding: 1rem;
   outline: none;
   border: none;
-  background-color: #eee;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
   transition: all 0.2s;
 }
 
@@ -160,7 +162,7 @@ main {
   position: absolute;
   width: 2rem;
   height: 2rem;
-  color: #3b3b3b;
+  color: var(--text-primary-color);
   top: 3.16rem;
   right: 1rem;
 }
@@ -190,13 +192,14 @@ main {
 .form__signup-btn:hover {
   background: none;
   border: 2px solid #0084ff;
-  background-color: #fff;
+  background-color: var(--background-color-secondary);
   color: #0084ff;
 }
 
 .form__signup-register {
   font-size: 1.2rem;
   text-align: center;
+  color: var(--text-primary-color);
 }
 
 .form__signup-register a {

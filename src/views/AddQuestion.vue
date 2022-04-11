@@ -1,6 +1,5 @@
 <script setup>
 import { ref, reactive, computed } from "vue";
-import { uid } from "uid";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import { useStore } from "vuex";
@@ -38,7 +37,6 @@ async function getUsername() {
 getUsername();
 
 const question = reactive({
-  id: uid(),
   name: "",
   content: "",
   tags: [],
@@ -168,7 +166,7 @@ function removeFromTags(tag) {
             @click.prevent="removeFromTags(tag)"
           >
             {{ tag }}
-            <span class="form__question-tag-delete">x</span>
+            <span>x</span>
           </a>
         </div>
       </div>
@@ -189,14 +187,16 @@ main {
   width: 100%;
   max-width: 45rem;
   padding: 3rem;
-  background-color: #fff;
+  background-color: var(--background-color-secondary);
   border-radius: 1rem;
   box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px;
+  transition: background-color 0.2s;
 }
 
 .form__question-header {
   font-size: 2.6rem;
   font-weight: 400;
+  color: var(--text-primary-color);
 }
 
 .form__question-group {
@@ -222,7 +222,8 @@ main {
   padding: 1rem;
   outline: none;
   border: none;
-  background-color: #eee;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
   transition: all 0.2s;
 }
 
@@ -233,7 +234,8 @@ main {
   font-size: 1.6em;
   padding: 1rem;
   border: none;
-  background-color: #eee;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
   resize: none;
   outline: none;
   transition: all 0.2s;
@@ -261,7 +263,7 @@ main {
 .form__question-btn:hover {
   background: none;
   border: 2px solid #0084ff;
-  background-color: #fff;
+  background-color: var(--background-color-secondary);
   color: #0084ff;
 }
 
@@ -276,14 +278,11 @@ main {
   text-decoration: none;
   color: #fff;
   background-color: #00a2ff;
-  border-radius: 0.5rem;
+  border: 2px solid #00a2ff;
+  border-radius: 1rem;
   padding: 0.25rem 0.75rem;
   margin-right: 0.5rem;
   font-size: 1.2rem;
-}
-
-.form__question-tag-delete {
-  color: #fff;
 }
 
 .error-msg {

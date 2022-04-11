@@ -1,6 +1,6 @@
 <script setup>
 import AppNav from "../src/components/Nav.vue";
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { useStore } from "vuex";
 
 const store = useStore();
@@ -16,11 +16,32 @@ const error = computed(() => store.state.errorMsg);
   <Transition>
     <p v-if="error" class="msg error">{{ error }}</p>
   </Transition>
-  <router-view></router-view>
+  <router-view v-slot="{ Component }">
+    <transition mode="out-in">
+      <component :is="Component" />
+    </transition>
+  </router-view>
 </template>
 
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
+/* @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"); */
+
+:root {
+  --background-color-primary: #ebebeb;
+  --background-color-secondary: #fafafa;
+  --accent-color: #ddd;
+  --text-primary-color: #222;
+  --manage-btn-bg-color: #ccc;
+}
+
+:root.dark {
+  --background-color-primary: #1e1e1e;
+  --background-color-secondary: #2d2d30;
+  --accent-color: #3f3f3f;
+  --text-primary-color: #ddd;
+  --manage-btn-bg-color: #666;
+}
 
 *,
 *::before,
@@ -34,11 +55,12 @@ const error = computed(() => store.state.errorMsg);
 html {
   box-sizing: border-box;
   font-size: 62.5%;
-  background-color: #eee;
+  background-color: var(--accent-color);
+  transition: background-color 0.2s;
 }
 
 #app {
-  font-family: "Roboto", Helvetica, Arial, sans-serif;
+  font-family: "Roboto", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
