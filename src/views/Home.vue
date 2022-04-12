@@ -7,8 +7,16 @@ const store = useStore();
 const user = supabase.auth.user();
 
 let questions = ref([]);
+let loading = ref(false);
+let activeFilter = ref("recent");
+let searched = ref(false);
+let filteredByTag = ref(false);
 
 async function getQuestions() {
+  loading.value = true;
+  searched.value = false;
+  activeFilter.value = "recent";
+  filteredByTag.value = false;
   try {
     const { data, error } = await supabase
       .from("questions")
@@ -30,6 +38,8 @@ async function getQuestions() {
     questions.value = data;
 
     updateQuestionUpvotes();
+
+    loading.value = false;
 
     console.log(questions.value);
   } catch (error) {
@@ -204,6 +214,157 @@ async function downvoteQuestion(question) {
   }
 }
 
+// Search
+let search = ref("");
+
+async function searchQuestions() {
+  loading.value = true;
+  searched.value = true;
+  activeFilter.value = "";
+  filteredByTag.value = false;
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .select(
+        `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  id
+		  ),
+		  votes_question (
+			  *
+		  ) `
+      )
+      .textSearch("name", `${search.value}`);
+
+    questions.value = data;
+    updateQuestionUpvotes();
+    console.log(search.value);
+    console.log(data);
+    loading.value = false;
+
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// Filter by tag
+let tagName = ref("");
+
+async function filterByTag(tag) {
+  loading.value = true;
+  searched.value = false;
+  activeFilter.value = "";
+  tagName.value = tag;
+  filteredByTag.value = true;
+  try {
+    const { data, error } = await supabase.from("questions").select(
+      `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  *
+		  ),
+		  votes_question (
+			  *
+		  ) `
+    );
+
+    questions.value = data;
+
+    questions.value = [];
+
+    data.forEach((question) => {
+      if (question.tags.includes(tag)) {
+        questions.value.push(question);
+      }
+    });
+
+    updateQuestionUpvotes();
+    loading.value = false;
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// Filters
+async function noAnswers() {
+  loading.value = true;
+  activeFilter.value = "noAnswers";
+  searched.value = false;
+  filteredByTag.value = false;
+  try {
+    const { data, error } = await supabase.from("questions").select(
+      `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  *
+		  ),
+		  votes_question (
+			  *
+		  ) `
+    );
+
+    questions.value = [];
+
+    data.forEach((question) => {
+      if (question.answers.length === 0) {
+        questions.value.push(question);
+      }
+    });
+    updateQuestionUpvotes();
+    loading.value = false;
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function answered() {
+  loading.value = true;
+  activeFilter.value = "answered";
+  searched.value = false;
+  filteredByTag.value = false;
+  try {
+    const { data, error } = await supabase.from("questions").select(
+      `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  *
+		  ),
+		  votes_question (
+			  *
+		  ) `
+    );
+
+    questions.value = [];
+
+    data.forEach((question) => {
+      if (question.answers.length > 0) {
+        questions.value.push(question);
+      }
+    });
+    updateQuestionUpvotes();
+    loading.value = false;
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
 function timeSince(date) {
   var seconds = Math.floor((new Date() - date) / 1000);
 
@@ -236,7 +397,11 @@ function timeSince(date) {
   <div>
     <main class="container">
       <div class="filters">
-        <button class="filters__btn active">
+        <button
+          class="filters__btn"
+          @click.prevent="getQuestions"
+          :class="{ active: activeFilter == 'recent' }"
+        >
           <svg viewBox="0 0 24 24" class="filters__btn-icon">
             <path
               fill="currentColor"
@@ -244,7 +409,11 @@ function timeSince(date) {
             /></svg
           ><span class="filters__btn-text">Ostatnio zadane</span>
         </button>
-        <button class="filters__btn">
+        <button
+          @click.prevent="noAnswers"
+          class="filters__btn"
+          :class="{ active: activeFilter == 'noAnswers' }"
+        >
           <svg viewBox="0 0 24 24" class="filters__btn-icon">
             <path
               fill="currentColor"
@@ -252,7 +421,11 @@ function timeSince(date) {
             /></svg
           ><span class="filters__btn-text">Bez odpowiedzi</span>
         </button>
-        <button class="filters__btn">
+        <button
+          @click.prevent="answered"
+          class="filters__btn"
+          :class="{ active: activeFilter == 'answered' }"
+        >
           <svg viewBox="0 0 24 24" class="filters__btn-icon">
             <path
               fill="currentColor"
@@ -260,19 +433,44 @@ function timeSince(date) {
             /></svg
           ><span class="filters__btn-text">Z odpowiedzią</span>
         </button>
-        <button class="filters__btn">
-          <svg viewBox="0 0 24 24" class="filters__btn-icon">
-            <path
-              fill="currentColor"
-              d="M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z"
-            /></svg
-          ><span class="filters__btn-text">Z największą liczbą głosów</span>
-        </button>
+        <form class="filters__search" @submit.prevent="searchQuestions">
+          <input
+            v-model="search"
+            type="text"
+            class="filters__search-input"
+            placeholder="Wyszukaj pytanie"
+            required
+          />
+          <button type="submit" class="filters__search-btn">
+            <svg type="" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
+              />
+            </svg>
+          </button>
+        </form>
       </div>
 
       <section class="questions">
-        <h1 class="questions__header">Pytania</h1>
-        <p v-if="questions.length == 0" class="info">Brak pytań</p>
+        <h1 class="questions__header">
+          Pytania
+          <span v-if="searched" class="searched"
+            >(słowo kluczowe: <span class="display-name">{{ search }}</span
+            >)</span
+          >
+          <span v-if="filteredByTag" class="searched"
+            >(filtrowanie wg. tagu:
+            <span class="display-name">{{ tagName }}</span
+            >)</span
+          >
+        </h1>
+        <img
+          v-if="loading"
+          src="../assets/ripple-loading.svg"
+          class="loading-spinner"
+        />
+        <p v-if="questions.length == 0 && !loading" class="info">Brak pytań</p>
         <ul class="questions__list">
           <li
             v-for="question in questions"
@@ -378,6 +576,7 @@ function timeSince(date) {
               >
               <div class="questions__item-info">
                 <a
+                  @click.prevent="filterByTag(tag)"
                   v-for="tag in question.tags"
                   :key="tag"
                   href="#"
@@ -433,16 +632,49 @@ main {
 }
 
 .filters__btn {
-  flex: 1;
+  flex: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  border: none;
+  border: 2px solid var(--background-color-secondary);
   background-color: var(--background-color-secondary);
   color: var(--text-primary-color);
   cursor: pointer;
   transition: 0.2s all;
+}
+
+.filters__search {
+  position: relative;
+  padding: 2rem;
+  flex: 3;
+}
+
+.filters__search-input {
+  width: 90%;
+  padding: 1rem;
+  padding-right: 3.5rem;
+  border-radius: 1.5rem;
+  border: none;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
+  transition: all 0.2s;
+}
+
+.filters__search-input:focus {
+  outline: none;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.filters__search-btn {
+  position: absolute;
+  width: 2.5rem;
+  height: 2.5rem;
+  right: 5.25rem;
+  top: 2.5rem;
+  background-color: transparent;
+  border: none;
+  color: #0099ff;
 }
 
 .active {
@@ -572,5 +804,19 @@ main {
   display: inline-block;
   margin: 0 0.5rem;
   color: #00a2ff;
+}
+
+.loading-spinner {
+  display: block;
+  margin: 4rem auto 0;
+  text-align: center;
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+.searched {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 1.4rem;
 }
 </style>

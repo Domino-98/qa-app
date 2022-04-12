@@ -1,7 +1,7 @@
 <script setup>
 import { useRoute } from "vue-router";
 import router from "../router/index";
-import { reactive, ref, computed, onMounted, watch } from "vue";
+import { reactive, ref, computed, onMounted, watchEffect } from "vue";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
 
@@ -193,10 +193,10 @@ async function deleteQuestion() {
   } catch (error) {
     console.log(error);
   }
-  // Delete answers
+  // Delete views
   try {
     const { data, error } = await supabase
-      .from("answers")
+      .from("views")
       .delete()
       .eq("question_id", route.params.id);
     if (error) {
@@ -205,12 +205,13 @@ async function deleteQuestion() {
   } catch (error) {
     console.log(error);
   }
-  // Delete views
+  // Delete answers
   try {
     const { data, error } = await supabase
-      .from("views")
+      .from("answers")
       .delete()
       .eq("question_id", route.params.id);
+
     if (error) {
       throw error;
     }
@@ -239,9 +240,10 @@ async function deleteQuestion() {
   }
 }
 
+let answerTimestamp = ref;
+
 const answer = reactive({
   content: "",
-  created_at: new Date(),
   score: 0,
   count: 0,
   owner_display_name: "",
@@ -278,7 +280,7 @@ async function addAnswer() {
         {
           user_id: user.id,
           question_id: route.params.id,
-          created_at: answer.created_at,
+          created_at: new Date(),
           content: answer.content,
           score: answer.score,
           user_display_name: username.value,
@@ -688,6 +690,23 @@ async function downvoteAnswer(answer) {
   }
 }
 
+// Filters
+const filterType = ref("Newest");
+
+watchEffect(() => {
+  if (filterType.value === "Newest") {
+    answers.value.sort(
+      (b, a) => new Date(a.created_at) - new Date(b.created_at)
+    );
+  } else if (filterType.value === "Oldest") {
+    answers.value.sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+  } else if (filterType.value === "Positive") {
+    answers.value.sort((b, a) => a.score - b.score);
+  }
+});
+
 function timeSince(date) {
   let seconds = Math.floor((new Date() - date) / 1000);
 
@@ -933,10 +952,14 @@ function timeSince(date) {
         </form>
         <h1 class="answers__header">Odpowiedzi ({{ answer.count }})</h1>
         <div class="select-dropdown">
-          <select class="answers__filter" name="Filtruj odpowiedzi" id="">
+          <select
+            class="answers__filter"
+            name="Filtruj odpowiedzi"
+            v-model="filterType"
+          >
             <option value="Newest">Najnowsze</option>
             <option value="Oldest">Najstarsze</option>
-            <option value="Most positive">Pozytywna ilość głosów</option>
+            <option value="Positive">Pozytywna ilość głosów</option>
           </select>
         </div>
 
@@ -1140,7 +1163,7 @@ main {
 }
 
 .question__title {
-  font-size: 2.6rem;
+  font-size: 2.4rem;
   font-weight: 400;
   color: var(--text-primary-color);
 }
