@@ -56,6 +56,7 @@ async function getQuestion() {
     updateQuestionUpvote();
 
     if (user) canEditQuestion.value = question.value.owner_user_id === user.id;
+    getAnswers();
 
     console.log(question.value);
   } catch (error) {
@@ -96,7 +97,6 @@ function updateQuestionUpvote() {
 
 // Edit mode
 let editModeQuestion = ref(false);
-let editModeAnswer = ref(false);
 
 function editQ() {
   editModeQuestion.value = !editModeQuestion.value;
@@ -114,7 +114,6 @@ function editA(answerId) {
       return (answer.editMode = !answer.editMode);
     }
   });
-  return (editModeAnswer.value = !editModeAnswer.value);
 }
 
 function tagsToArray() {
@@ -317,7 +316,12 @@ async function getAnswers() {
 
     answers.value.forEach((answer) => {
       answer.editMode = false;
-      console.log(answers.value);
+      if (answer.id == question.value.accepted_answer_id) {
+        answer.accepted_answer = true;
+      } else {
+        answer.accepted_answer = false;
+      }
+      console.log(answer);
     });
 
     if (user) {
@@ -345,8 +349,6 @@ async function getAnswers() {
   }
 }
 
-getAnswers();
-
 // Edit answer
 async function editAnswer(answerId, answerContent) {
   try {
@@ -372,6 +374,19 @@ async function editAnswer(answerId, answerContent) {
 
 // Delete answer
 async function deleteAnswer(answerId) {
+  // Delete answer votes
+  try {
+    const { data, error } = await supabase
+      .from("votes_answer")
+      .delete()
+      .eq("question_id", route.params.id);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  // Delete answer
   try {
     const { data, error } = await supabase
       .from("answers")
@@ -627,8 +642,7 @@ async function upvoteAnswer(answer) {
   }
 }
 
-// Downvote answers
-
+// Downvote answer
 async function downvoteAnswer(answer) {
   displayVoteError("answer", answer);
   if (user && answer.user_id != user.id) {
@@ -706,6 +720,58 @@ watchEffect(() => {
     answers.value.sort((b, a) => a.score - b.score);
   }
 });
+
+// Choose the best answer
+async function bestAnswer(answer) {
+  if (question.value.owner_user_id == user.id) {
+    try {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("accepted_answer_id")
+        .match({ id: route.params.id })
+        .single();
+
+      console.log("accepted id", data.accepted_answer_id);
+      console.log("passed id", answer.id);
+      if (
+        data.accepted_answer_id == null ||
+        data.accepted_answer_id != answer.id
+      ) {
+        try {
+          const { data, error } = await supabase
+            .from("questions")
+            .update({ accepted_answer_id: answer.id })
+            .match({ id: route.params.id });
+
+          console.log(data);
+          answers.value.forEach((answer) => {
+            answer.accepted_answer = false;
+          });
+          answer.accepted_answer = true;
+          console.log(answer);
+        } catch (error) {
+          console.log(error);
+        }
+      } else if (data.accepted_answer_id == answer.id) {
+        try {
+          const { data, error } = await supabase
+            .from("questions")
+            .update({ accepted_answer_id: null })
+            .match({ id: route.params.id });
+
+          answer.accepted_answer = false;
+          console.log(answer);
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+async function updateAccepted() {}
 
 function timeSince(date) {
   let seconds = Math.floor((new Date() - date) / 1000);
@@ -967,7 +1033,12 @@ function timeSince(date) {
           <p v-if="answers.length === 0" class="info">
             Nie odpowiedziano jeszcze na to pytanie
           </p>
-          <li v-for="answer in answers" :key="answer.id" class="answers__item">
+          <li
+            v-for="answer in answers"
+            :key="answer.id"
+            class="answers__item"
+            :class="{ 'best-answer': answer.accepted_answer }"
+          >
             <div class="answers__item-votes">
               <div>
                 <svg
@@ -1046,6 +1117,34 @@ function timeSince(date) {
               </form>
 
               <div class="answers__info">
+                <svg
+                  v-if="
+                    canEditQuestion &&
+                    answer.user_id != user.id &&
+                    !answer.accepted_answer
+                  "
+                  class="answers__best-btn"
+                  viewBox="0 0 24 24"
+                  @click.prevent="bestAnswer(answer)"
+                >
+                  <title>Zaznacz jako najlepszą odpowiedź</title>
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20M16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
+                  />
+                </svg>
+                <svg
+                  v-if="answer.accepted_answer"
+                  @click.prevent="bestAnswer(answer)"
+                  class="answers__best"
+                  viewBox="0 0 24 24"
+                >
+                  <title>Najlepsza wybrana odpowiedź</title>
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"
+                  />
+                </svg>
                 <div v-if="answer.editable" class="answers__btns">
                   <button
                     @click.prevent="editA(answer.id)"
@@ -1086,7 +1185,8 @@ function timeSince(date) {
                       )
                     )
                   }}
-                  temu, {{ new Date(answer.created_at).toLocaleDateString() }},
+                  temu,
+                  {{ new Date(answer.created_at).toLocaleDateString() }},
                   {{
                     new Date(answer.created_at).toLocaleTimeString([], {
                       hour: "2-digit",
@@ -1185,8 +1285,8 @@ main {
 
 .question__tag {
   text-decoration: none;
-  color: #fff;
-  background-color: #00a2ff;
+  color: #00a2ff;
+  background-color: transparent;
   border: 2px solid #00a2ff;
   border-radius: 1rem;
   padding: 0.25rem 0.75rem;
@@ -1219,6 +1319,10 @@ main {
   padding: 2rem 0;
   list-style-type: none;
   border-bottom: 2px solid var(--accent-color);
+}
+
+.answers__item:first-child {
+  margin-top: 1.25rem;
 }
 
 .answers__item:last-child {
@@ -1307,7 +1411,7 @@ main {
   display: inline-block;
   position: relative;
   background-color: var(--accent-color);
-  border-radius: 2px;
+  border-radius: 0.2rem;
 }
 
 .select-dropdown select {
@@ -1350,7 +1454,7 @@ main {
 
 .answers__btns {
   position: absolute;
-  bottom: 2rem;
+  bottom: 1rem;
   right: 1rem;
 }
 
@@ -1380,6 +1484,30 @@ main {
   color: var(--text-primary-color);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+}
+
+.answers__best-btn,
+.answers__best {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 4rem;
+  height: 4rem;
+  color: #00aeff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.answers__best-btn:hover {
+  color: #00eeff;
+}
+
+.best-answer {
+  padding: 1.5rem;
+  background-image: linear-gradient(
+    to bottom right,
+    rgba(0, 200, 255, 0.1),
+    rgba(0, 30, 255, 0.1)
+  );
 }
 
 .question__edit-name {
