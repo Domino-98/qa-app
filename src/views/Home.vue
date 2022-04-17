@@ -6,7 +6,7 @@ import { useStore } from "vuex";
 const store = useStore();
 const user = supabase.auth.user();
 
-let questions = ref([]);
+const questions = ref([]);
 let loading = ref(false);
 let activeFilter = ref("recent");
 let searched = ref(false);
@@ -27,7 +27,7 @@ async function getQuestions() {
 			  view_count
 		  ),
 		  answers (
-			  id
+			  *
 		  ),
 		  votes_question (
 			  *
@@ -35,9 +35,12 @@ async function getQuestions() {
 	  `
       )
       .order("created_at", { ascending: false });
+
+    console.log(data);
     questions.value = data;
 
     updateQuestionUpvotes();
+    filterAnswersOnly();
 
     loading.value = false;
 
@@ -48,6 +51,14 @@ async function getQuestions() {
 }
 
 getQuestions();
+
+function filterAnswersOnly() {
+  questions.value.forEach((question) => {
+    question.answersWithoutParent = question.answers.filter(
+      (answer) => answer.parent_id == null
+    );
+  });
+}
 
 function updateQuestionUpvotes() {
   questions.value.forEach((question) => {
@@ -232,7 +243,7 @@ async function searchQuestions() {
 			  view_count
 		  ),
 		  answers (
-			  id
+			  *
 		  ),
 		  votes_question (
 			  *
@@ -241,10 +252,12 @@ async function searchQuestions() {
       .textSearch("name", `${search.value}`);
 
     questions.value = data;
-    updateQuestionUpvotes();
+
     console.log(search.value);
     console.log(data);
     loading.value = false;
+    updateQuestionUpvotes();
+    filterAnswersOnly();
 
     if (error) console.log(error);
   } catch (error) {
@@ -287,6 +300,7 @@ async function filterByTag(tag) {
     });
 
     updateQuestionUpvotes();
+    filterAnswersOnly();
     loading.value = false;
     if (error) console.log(error);
   } catch (error) {
@@ -323,6 +337,7 @@ async function noAnswers() {
       }
     });
     updateQuestionUpvotes();
+    filterAnswersOnly();
     loading.value = false;
     if (error) console.log(error);
   } catch (error) {
@@ -358,6 +373,7 @@ async function answered() {
       }
     });
     updateQuestionUpvotes();
+    filterAnswersOnly();
     loading.value = false;
     if (error) console.log(error);
   } catch (error) {
@@ -460,8 +476,7 @@ function timeSince(date) {
             >)</span
           >
           <span v-if="filteredByTag" class="searched"
-            >(filtrowanie wg. tagu:
-            <span class="display-name">{{ tagName }}</span
+            >(tag: <span class="display-name">{{ tagName }}</span
             >)</span
           >
         </h1>
@@ -540,7 +555,7 @@ function timeSince(date) {
                 }"
                 class="questions__item-owner-date"
               >
-                <span> Zadane przez</span>
+                <span>Zadane przez</span>
                 <span class="display-name">{{
                   question.owner_display_name
                 }}</span>
@@ -592,7 +607,10 @@ function timeSince(date) {
                   }"
                   class="questions__item-answers"
                   ><span
-                    >{{ question.answers.length }} odpowiedzi,</span
+                    >{{
+                      question.answersWithoutParent.length
+                    }}
+                    odpowiedzi,</span
                   ></router-link
                 >
                 <router-link
@@ -674,20 +692,20 @@ main {
   top: 2.5rem;
   background-color: transparent;
   border: none;
-  color: #0099ff;
+  color: var(--primary-color);
 }
 
 .active {
-  border-bottom: 2px solid #0099ff;
-  color: #0099ff;
+  border-bottom: 2px solid var(--primary-color);
+  color: var(--primary-color);
 }
 
 .filters__btn:hover {
-  color: #0099ff;
+  color: var(--primary-color);
 }
 
 .filters__btn-icon {
-  color: #0099ff;
+  color: var(--primary-color);
   width: 2rem;
   height: 2rem;
   margin-right: 0.25rem;
@@ -747,7 +765,7 @@ main {
 }
 
 .questions__item-votes-icon--up {
-  color: #28cf28;
+  color: #3ed73e;
 }
 
 .questions__item-votes-icon--down {
@@ -765,10 +783,10 @@ main {
 
 .questions__item-tag {
   text-decoration: none;
-  color: #fff;
-  background-color: #00a2ff;
-  border: 2px solid #00a2ff;
-  border-radius: 1rem;
+  color: var(--primary-color);
+  background-color: tranparent;
+  border: 2px solid var(--primary-color);
+  border-radius: 1.5rem;
   padding: 0.25rem 0.75rem;
   margin-right: 0.5rem;
   font-size: 1.2rem;
@@ -777,17 +795,16 @@ main {
 .questions__item-owner-date {
   display: block;
   text-decoration: none;
-  color: #3f3f3f;
+  color: #7f7f7f;
   margin-bottom: 1.25rem;
   font-size: 1.1rem;
-  color: var(--text-primary-color);
 }
 
 .questions__item-answers,
 .questions__item-views {
   display: inline-block;
   text-decoration: none;
-  color: #000;
+  color: var(--text-primary-color);
   margin-right: 0.5rem;
   font-size: 1.2em;
 }
@@ -803,7 +820,7 @@ main {
 .display-name {
   display: inline-block;
   margin: 0 0.5rem;
-  color: #00a2ff;
+  color: var(--primary-color);
 }
 
 .loading-spinner {

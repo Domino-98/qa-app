@@ -24,10 +24,11 @@ const error = computed(() => store.state.errorMsg);
 </template>
 
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
-/* @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"); */
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
 
 :root {
+  --btn-color: #2097ff;
+  --primary-color: #0088ff;
   --background-color-primary: #ebebeb;
   --background-color-secondary: #fafafa;
   --accent-color: #ddd;
@@ -36,6 +37,7 @@ const error = computed(() => store.state.errorMsg);
 }
 
 :root.dark {
+  --primary-color: #00d5ff;
   --background-color-primary: #1e1e1e;
   --background-color-secondary: #2d2d30;
   --accent-color: #3f3f3f;
@@ -66,7 +68,7 @@ html {
 }
 
 .container {
-  max-width: 100rem;
+  max-width: 95rem;
   margin: auto;
 }
 
@@ -85,7 +87,7 @@ html {
 }
 
 .success {
-  background-color: #28cf28;
+  background-color: #3ed73e;
 }
 
 .error {
@@ -100,5 +102,16 @@ html {
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(5rem);
 }
 </style>

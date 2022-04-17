@@ -41,8 +41,6 @@ const question = reactive({
   content: "",
   tags: [],
   created_at: new Date(),
-  view_count: 0,
-  score: 0,
   owner_display_name: "",
 });
 
@@ -65,7 +63,6 @@ const addQuestion = handleSubmit(async (values) => {
         content: question.content,
         tags: question.tags,
         created_at: question.created_at,
-        score: question.score,
         owner_display_name: username.value,
       },
     ]);

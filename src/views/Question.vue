@@ -15,6 +15,9 @@ const user = supabase.auth.user();
 
 const question = ref({});
 const answers = ref([]);
+const answersWithoutParent = computed(() => {
+  return answers.value.filter((answer) => answer.parent_id == null);
+});
 
 const canEditQuestion = ref();
 
@@ -243,9 +246,6 @@ let answerTimestamp = ref;
 
 const answer = reactive({
   content: "",
-  score: 0,
-  count: 0,
-  owner_display_name: "",
 });
 
 const username = ref("");
@@ -281,12 +281,42 @@ async function addAnswer() {
           question_id: route.params.id,
           created_at: new Date(),
           content: answer.content,
-          score: answer.score,
           user_display_name: username.value,
         },
       ]);
+
       getAnswers();
       answer.content = "";
+      console.log(answer.content);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+// Reply to answer
+async function addReply(event, answer) {
+  if (!user) {
+    store.commit("errorMsg", "Musisz być zalogowany by móc dodać odpowiedź!");
+    setTimeout(() => {
+      store.commit("errorMsg", "");
+    }, 3000);
+  } else {
+    // Add reply
+    try {
+      const { error } = await supabase.from("answers").insert([
+        {
+          parent_id: answer.id,
+          user_id: user.id,
+          question_id: route.params.id,
+          created_at: new Date(),
+          content: event.target[0].value,
+          user_display_name: username.value,
+        },
+      ]);
+
+      getAnswers();
+      event.target[0].value = "";
       console.log(answer.content);
     } catch (error) {
       console.log(error);
@@ -321,7 +351,6 @@ async function getAnswers() {
       } else {
         answer.accepted_answer = false;
       }
-      console.log(answer);
     });
 
     if (user) {
@@ -332,18 +361,16 @@ async function getAnswers() {
       });
     }
 
-    console.log(answers.value);
-  } catch (error) {
-    console.log(error);
-  }
-  try {
-    const { error, data, count } = await supabase
-      .from("answers")
-      .select("*", { count: "exact" })
-      .eq("question_id", route.params.id);
+    answers.value.forEach((answer) => {
+      answer.replies = [];
+      answers.value.forEach((reply) => {
+        if (reply.parent_id == answer.id) {
+          answer.replies.push(reply);
+        }
+      });
+    });
 
-    answer.count = count;
-    answer.content = "";
+    console.log(answers.value);
   } catch (error) {
     console.log(error);
   }
@@ -379,8 +406,23 @@ async function deleteAnswer(answerId) {
     const { data, error } = await supabase
       .from("votes_answer")
       .delete()
-      .eq("question_id", route.params.id);
+      .eq("answer_id", answerId);
     if (error) {
+      store.commit("errorMsg", error.message);
+      throw error;
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  // Delete replies
+  try {
+    const { data, error } = await supabase
+      .from("answers")
+      .delete()
+      .eq("parent_id", answerId);
+
+    if (error) {
+      store.commit("errorMsg", error.message);
       throw error;
     }
   } catch (error) {
@@ -392,9 +434,9 @@ async function deleteAnswer(answerId) {
       .from("answers")
       .delete()
       .eq("id", answerId);
+
     if (error) {
       store.commit("errorMsg", error.message);
-      store.commit("loading", false);
       throw error;
     }
     store.commit("successMsg", "Odpowiedź została usunięta!");
@@ -771,8 +813,6 @@ async function bestAnswer(answer) {
   }
 }
 
-async function updateAccepted() {}
-
 function timeSince(date) {
   let seconds = Math.floor((new Date() - date) / 1000);
 
@@ -970,7 +1010,7 @@ function timeSince(date) {
                   />
                 </div>
                 <span class="question__answers"
-                  >{{ answer.count }} odpowiedzi,</span
+                  >{{ answersWithoutParent.length }} odpowiedzi,</span
                 >
                 <span class="question__views"
                   >{{ question.views }} wyświetleń</span
@@ -1016,7 +1056,9 @@ function timeSince(date) {
           ></textarea>
           <button class="answers__btn" type="submit">Dodaj odpowiedź</button>
         </form>
-        <h1 class="answers__header">Odpowiedzi ({{ answer.count }})</h1>
+        <h1 class="answers__header">
+          Odpowiedzi ({{ answersWithoutParent.length }})
+        </h1>
         <div class="select-dropdown">
           <select
             class="answers__filter"
@@ -1034,7 +1076,7 @@ function timeSince(date) {
             Nie odpowiedziano jeszcze na to pytanie
           </p>
           <li
-            v-for="answer in answers"
+            v-for="answer in answersWithoutParent"
             :key="answer.id"
             class="answers__item"
             :class="{ 'best-answer': answer.accepted_answer }"
@@ -1092,7 +1134,7 @@ function timeSince(date) {
                 </svg>
               </div>
             </div>
-            <div>
+            <div class="answers__content">
               <form @submit.prevent="editAnswer(answer.id, answer.content)">
                 <p
                   style="white-space: pre-wrap"
@@ -1104,7 +1146,7 @@ function timeSince(date) {
                 <textarea
                   v-else
                   v-model="answer.content"
-                  class="answers__input"
+                  class="answers__input-edit"
                   name="answer"
                   id="answer"
                   rows="3"
@@ -1195,7 +1237,128 @@ function timeSince(date) {
                   }}
                 </p>
               </div>
+              <form
+                v-show="answer.textEditOpen"
+                class="replies__add"
+                @submit.prevent="
+                  addReply($event, answer),
+                    (answer.textEditOpen = !answer.textEditOpen)
+                "
+              >
+                <textarea
+                  class="replies__input"
+                  name="replies"
+                  id="replies"
+                  rows="3"
+                  required
+                ></textarea>
+                <button class="replies__btn" type="submit">
+                  Dodaj komentarz
+                </button>
+              </form>
+              <div class="reply">
+                <button
+                  @click.prevent="answer.textEditOpen = !answer.textEditOpen"
+                  class="reply__btn"
+                  type="submit"
+                >
+                  Skomentuj
+                </button>
+                <button
+                  :class="{ replied: answer.replies.length > 0 }"
+                  title="Pokaż sekcje komentarzy"
+                  @click.prevent="answer.showComments = !answer.showComments"
+                  class="reply__info"
+                >
+                  {{ answer.replies.length }} komentarzy
+                </button>
+              </div>
             </div>
+            <ul class="replies__list">
+              <transition-group name="list">
+                <li
+                  v-show="answer.showComments"
+                  v-for="reply in answer.replies"
+                  :key="reply.id"
+                  class="replies__item"
+                >
+                  <form @submit.prevent="editAnswer(reply.id, reply.content)">
+                    <p
+                      style="white-space: pre-wrap"
+                      v-if="!reply.editMode"
+                      class="replies__item-content"
+                    >
+                      {{ reply.content }}
+                    </p>
+                    <textarea
+                      v-else
+                      v-model="reply.content"
+                      class="replies__input"
+                      name="reply"
+                      id="reply"
+                      rows="3"
+                      placeholder="Treść odpowiedzi"
+                      required
+                    ></textarea>
+                    <button v-if="reply.editMode" class="replies__btn-edit">
+                      Edytuj komentarz
+                    </button>
+                  </form>
+
+                  <div class="replies__info">
+                    <p>
+                      Komentarz dodany przez
+                      <span class="display-name">{{
+                        reply.user_display_name
+                      }}</span>
+                      {{
+                        timeSince(
+                          new Date(
+                            Date.now() -
+                              (new Date().getTime() -
+                                new Date(reply.created_at).getTime())
+                          )
+                        )
+                      }}
+                      temu,
+                      {{ new Date(reply.created_at).toLocaleDateString() }},
+                      {{
+                        new Date(reply.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      }}
+                    </p>
+                    <div v-if="reply.editable" class="replies__btns">
+                      <button
+                        @click.prevent="editA(reply.id)"
+                        class="replies__edit"
+                        title="Edytuj komentarz"
+                      >
+                        <svg viewBox="0 0 24 24">
+                          <path
+                            fill="currentColor"
+                            d="M11 20V22H3C1.9 22 1 21.1 1 20V4C1 2.9 1.9 2 3 2H21C22.1 2 23 2.9 23 4V12.1L22.8 11.9C22.3 11.4 21.7 11.1 21 11.1V6H3V20H11M21.4 13.3L22.7 14.6C22.9 14.8 22.9 15.2 22.7 15.4L21.7 16.4L19.6 14.3L20.6 13.3C20.7 13.2 20.8 13.1 21 13.1C21.2 13.1 21.3 13.2 21.4 13.3M21.1 16.9L15.1 23H13V20.9L19.1 14.8L21.1 16.9Z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        @click.prevent="deleteAnswer(reply.id)"
+                        class="replies__delete"
+                        title="Usuń komentarz"
+                      >
+                        <svg viewBox="0 0 24 24">
+                          <path
+                            fill="currentColor"
+                            d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </transition-group>
+            </ul>
           </li>
         </ul>
       </section>
@@ -1235,6 +1398,7 @@ main {
 
 .question__item-votes,
 .answers__item-votes {
+  align-self: flex-start;
   margin-right: 2rem;
   color: var(--text-primary-color);
 }
@@ -1255,7 +1419,7 @@ main {
 
 .question__item-votes-icon--up,
 .answers__item-votes-icon--up {
-  color: #28cf28;
+  color: #3ed73e;
 }
 .question__item-votes-icon--down,
 .answers__item-votes-icon--down {
@@ -1278,17 +1442,17 @@ main {
 }
 
 .question__content {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: var(--text-primary-color);
   word-break: break-all;
 }
 
 .question__tag {
   text-decoration: none;
-  color: #00a2ff;
+  color: var(--primary-color);
   background-color: transparent;
-  border: 2px solid #00a2ff;
-  border-radius: 1rem;
+  border: 2px solid var(--primary-color);
+  border-radius: 1.5rem;
   padding: 0.25rem 0.75rem;
   margin-right: 0.5rem;
   font-size: 1.2rem;
@@ -1306,55 +1470,102 @@ main {
 }
 
 .answers__header {
+  margin-top: 2rem;
   margin-bottom: 0.5rem;
   font-size: 1.8rem;
   font-weight: 400;
   color: var(--text-primary-color);
 }
 
+.answers__content {
+  flex-basis: calc(100% - 9rem);
+}
+
 .answers__item {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   padding: 2rem 0;
   list-style-type: none;
-  border-bottom: 2px solid var(--accent-color);
+  border-top: 2px solid var(--accent-color);
 }
 
 .answers__item:first-child {
   margin-top: 1.25rem;
 }
 
-.answers__item:last-child {
-  border-bottom: none;
+.answers__item:first-child {
+  border-top: none;
 }
 
-.answers__item-content {
-  font-size: 1.5rem;
+.answers__item-content,
+.replies__item-content {
+  font-size: 1.6rem;
   color: var(--text-primary-color);
   word-break: break-all;
   padding-right: 11.25rem;
 }
 
+.replies__item-content {
+  font-size: 1.3rem;
+}
+
+.replies__list {
+  flex-basis: 100%;
+  margin-left: 5rem;
+  overflow: hidden;
+}
+
+.replies__item {
+  position: relative;
+  width: -moz-calc(50% - 5rem);
+  width: calc(50% - 5rem);
+  margin-top: 0.5rem;
+  margin-left: 3rem;
+  padding: 1rem 0;
+  list-style-type: none;
+  border-top: 2px solid var(--accent-color);
+}
+
+.replies__item:first-child {
+  margin-top: 1.5rem;
+  border-top: none;
+}
+
 .question__owner-date {
   margin-bottom: 1.25rem;
-  color: var(--text-primary-color);
+  color: #7f7f7f;
   font-size: 1.2rem;
 }
 
 .answers__info {
-  color: var(--text-primary-color);
+  color: #7f7f7f;
   font-size: 1.1rem;
   margin-top: 1.25rem;
 }
 
-.display-name {
-  color: #00a2ff;
+.replies__info {
+  display: flex;
+  align-items: center;
+  color: #7f7f7f;
+  font-size: 1.1rem;
+  margin-top: 1.25rem;
+  align-items: flex-end;
 }
 
-.answers__add {
+.display-name {
+  color: var(--primary-color);
+}
+
+.answers__add,
+.replies__add {
   display: flex;
   flex-direction: column;
+}
+
+.replies__add {
+  margin-top: 1.25rem;
 }
 
 .answers__label {
@@ -1362,7 +1573,9 @@ main {
   font-size: 1.4rem;
 }
 
-.answers__input {
+.answers__input,
+.answers__input-edit,
+.replies__input {
   font-family: inherit;
   width: 100%;
   margin-top: 0.5rem;
@@ -1377,15 +1590,22 @@ main {
 }
 
 .answers__input:focus,
-.answers__input:focus + .answers__btn {
+.answers__input:focus + .answers__btn,
+.answers__input-edit:focus,
+.answers__input-edit:focus + .answers__btn,
+.replies__input:focus,
+.replies__input:focus + .replies__btn {
   box-shadow: 0px 0.2rem 0.5rem #74747466;
 }
 
-.answers__btn {
-  float: left;
-  margin-bottom: 2rem;
-  border: 2px solid #00aeff;
-  background-color: #00aeff;
+.answers__input-edit {
+  width: 100%;
+}
+
+.answers__btn,
+.replies__btn {
+  border: 2px solid var(--btn-color);
+  background-color: var(--btn-color);
   color: #eee;
   border-bottom-left-radius: 1rem;
   border-bottom-right-radius: 1rem;
@@ -1397,11 +1617,20 @@ main {
   transition: all 0.2s;
 }
 
-.answers__btn:hover {
+.replies__input,
+.replies__btn {
+  width: 25rem;
+}
+
+.replies__input {
+  font-size: 1.3rem;
+}
+
+.answers__btn:hover,
+.replies__btn:hover {
   background: none;
-  border: 2px solid #00aeff;
   background-color: var(--background-color-secondary);
-  color: #00aeff;
+  color: var(--btn-color);
 }
 
 /* Custom Select */
@@ -1448,20 +1677,31 @@ main {
 
 .question__btns {
   position: absolute;
+  z-index: 10;
   top: 1rem;
   right: 1rem;
 }
 
 .answers__btns {
   position: absolute;
+  z-index: 10;
   bottom: 1rem;
   right: 1rem;
+}
+
+.replies__btns {
+  position: absolute;
+  z-index: 5;
+  top: 0.5rem;
+  right: 0.5rem;
 }
 
 .question__edit,
 .question__delete,
 .answers__edit,
-.answers__delete {
+.answers__delete,
+.replies__edit,
+.replies__delete {
   background-color: var(--manage-btn-bg-color);
   width: 4rem;
   height: 4rem;
@@ -1476,10 +1716,19 @@ main {
   transition: all 0.2s;
 }
 
+.replies__edit,
+.replies__delete {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+}
+
 .question__edit:hover,
 .question__delete:hover,
 .answers__edit:hover,
-.answers__delete:hover {
+.answers__delete:hover,
+.replies__edit:hover,
+.replies__delete:hover {
   background-color: var(--accent-color);
   color: var(--text-primary-color);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
@@ -1493,21 +1742,32 @@ main {
   right: 0.65rem;
   width: 4rem;
   height: 4rem;
-  color: #00aeff;
+  color: #3ed73e;
   cursor: pointer;
   transition: all 0.3s;
 }
 .answers__best-btn:hover {
-  color: #00eeff;
+  color: #51ff51;
 }
 
 .best-answer {
+  border: 1px solid #51ff51;
+  border-radius: 1rem;
   padding: 1.5rem;
   background-image: linear-gradient(
     to bottom right,
-    rgba(0, 200, 255, 0.1),
-    rgba(0, 30, 255, 0.1)
+    rgba(0, 255, 35, 0.1),
+    rgba(0, 100, 10, 0.1)
   );
+}
+
+.best-answer:first-child {
+  border-top: 1px solid #51ff51;
+  border-radius: 1rem;
+}
+
+.best-answer + li {
+  border-top: none;
 }
 
 .question__edit-name {
@@ -1557,13 +1817,14 @@ main {
 }
 
 .question__btn-edit,
-.answers__btn-edit {
+.answers__btn-edit,
+.replies__btn-edit {
   display: block;
   margin-top: 0.75rem;
-  border: 2px solid #0084ff;
-  background-color: #0084ff;
+  border: 2px solid var(--btn-color);
+  background-color: var(--btn-color);
   color: #eee;
-  font-size: 1.2em;
+  font-size: 1.2rem;
   border-radius: 2rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
@@ -1572,12 +1833,16 @@ main {
   transition: all 0.2s;
 }
 
+.replies__btn-edit {
+  font-size: 1rem;
+}
+
 .question__btn-edit:hover,
-.answers__btn-edit:hover {
+.answers__btn-edit:hover,
+.replies__btn-edit:hover {
   background: none;
-  border: 2px solid #0084ff;
   background-color: var(--background-color-secondary);
-  color: #0084ff;
+  color: var(--btn-color);
 }
 
 .question__modal-overlay {
@@ -1637,5 +1902,63 @@ main {
   border: 2px solid #ff3636;
   background-color: var(--accent-color);
   color: #ff3636;
+}
+
+.reply {
+  display: flex;
+}
+
+.reply__btn,
+.reply__info {
+  display: block;
+  margin-top: 1.25rem;
+  margin-right: 1.25rem;
+  border: 2px solid var(--btn-color);
+  background-color: var(--btn-color);
+  color: #eee;
+  font-size: 1rem;
+  border-radius: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.replied {
+  display: block;
+  margin-top: 1.25rem;
+  margin-right: 1.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #eee;
+  cursor: pointer;
+  text-align: center;
+  border: 2px solid transparent;
+  background-size: 500% 100%;
+  background-position: 10% 0;
+  background-image: linear-gradient(
+    to right,
+    #ff4912,
+    #ff9857,
+    #ff9857,
+    #ff4912
+  );
+  box-shadow: 0 1px 5px 0 rgba(255, 79, 20, 0.75);
+  border-radius: 1.5rem;
+  transition: all 0.5s ease-in-out;
+}
+
+.reply__btn:hover,
+.reply__info:hover {
+  border: 2px solid var(--btn-color);
+  background-color: var(--background-color-secondary);
+  color: var(--btn-color);
+}
+
+.replied:hover {
+  border: 2px solid transparent;
+  color: #eee;
+  background-position: 90% 0;
 }
 </style>
