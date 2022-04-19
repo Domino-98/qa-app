@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import { useStore } from "vuex";
@@ -39,11 +39,7 @@ const { value: passwordConfirmation, errorMessage: passwordError2 } = useField(
 
 // Register user
 const store = useStore();
-onMounted(() => {
-  store.commit("errorMsg", "");
-});
 const loading = computed(() => store.state.loading);
-const error = computed(() => store.state.errorMsg);
 
 // Submit form
 const registerUser = handleSubmit((values) => {
@@ -58,36 +54,36 @@ let passVisibleRepeat = ref(false);
 </script>
 
 <template>
-  <main class="container">
-    <form class="form__box" @submit.prevent="registerUser">
+  <main class="container auth">
+    <form class="form__auth" @submit.prevent="registerUser">
       <Loading
         v-model:active="loading"
         :can-cancel="false"
         :is-full-page="true"
       />
-      <h1 class="form__signup-header">Zarejestruj się</h1>
+      <h1 class="form__auth-header">Zarejestruj się</h1>
 
-      <div class="form__signup-group">
-        <label for="" class="form__signup-label">Nazwa użytkownika</label>
-        <input v-model="username" type="text" class="form__signup-input" />
+      <div class="form__auth-group">
+        <label for="" class="form__auth-label">Nazwa użytkownika</label>
+        <input v-model="username" type="text" class="form__auth-input" />
         <span class="error-msg">{{ usernameError }}</span>
       </div>
-      <div class="form__signup-group">
-        <label for="" class="form__signup-label">Adres e-mail</label>
-        <input v-model="email" type="email" class="form__signup-input" />
+      <div class="form__auth-group">
+        <label for="" class="form__auth-label">Adres e-mail</label>
+        <input v-model="email" type="email" class="form__auth-input" />
         <span class="error-msg">{{ emailError }}</span>
       </div>
-      <div class="form__signup-group">
-        <label for="password-new" class="form__signup-label">Hasło</label>
+      <div class="form__auth-group">
+        <label for="password-new" class="form__auth-label">Hasło</label>
         <input
           v-model="password"
           :type="!passVisible ? 'password' : 'text'"
           id="password-new"
-          class="form__signup-input"
+          class="form__auth-input"
         />
         <span class="error-msg">{{ passwordError }}</span>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisible = !passVisible"
           v-if="!passVisible"
@@ -98,7 +94,7 @@ let passVisibleRepeat = ref(false);
           />
         </svg>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisible = !passVisible"
           v-if="passVisible"
@@ -109,19 +105,19 @@ let passVisibleRepeat = ref(false);
           />
         </svg>
       </div>
-      <div class="form__signup-group">
-        <label for="password-repeat" class="form__signup-label"
+      <div class="form__auth-group">
+        <label for="password-repeat" class="form__auth-label"
           >Powtórz hasło</label
         >
         <input
           v-model="passwordConfirmation"
           :type="!passVisibleRepeat ? 'password' : 'text'"
           id="password-repeat"
-          class="form__signup-input"
+          class="form__auth-input"
         />
         <span class="error-msg">{{ passwordError2 }}</span>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisibleRepeat = !passVisibleRepeat"
           v-if="!passVisibleRepeat"
@@ -132,7 +128,7 @@ let passVisibleRepeat = ref(false);
           />
         </svg>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisibleRepeat = !passVisibleRepeat"
           v-if="passVisibleRepeat"
@@ -143,8 +139,8 @@ let passVisibleRepeat = ref(false);
           />
         </svg>
       </div>
-      <button type="Submit" class="form__signup-btn">Zarejestruj się</button>
-      <p class="form__signup-register">
+      <button type="Submit" class="form__auth-btn">Zarejestruj się</button>
+      <p class="form__auth-sign">
         Masz już konto?
         <router-link :to="{ name: 'Login' }">Zaloguj się</router-link>
       </p>
@@ -152,15 +148,15 @@ let passVisibleRepeat = ref(false);
   </main>
 </template>
 
-<style scoped>
-main {
+<style>
+main.auth {
   display: flex;
   align-items: center;
   justify-content: center;
   margin-top: 4rem;
 }
 
-.form__box {
+.form__auth {
   width: 100%;
   max-width: 45rem;
   padding: 3rem;
@@ -170,30 +166,28 @@ main {
   transition: background-color 0.2s;
 }
 
-.form__signup-header {
-  font-size: 2.6rem;
+.form__auth-header {
+  display: inline-block;
+  font-size: 2.4rem;
   font-weight: 400;
   color: var(--text-primary-color);
+  margin-bottom: 0.5rem;
 }
 
-.form__signup-group {
+.form__auth-group {
   position: relative;
   display: flex;
   flex-direction: column;
   margin: 1.5rem 0;
 }
 
-.form__signup-group:first-of-type {
-  margin-top: 3rem;
-}
-
-.form__signup-label {
+.form__auth-label {
   font-size: 1.4rem;
   font-weight: 400;
   color: #0084ff;
 }
 
-.form__signup-input {
+.form__auth-input {
   margin-top: 0.5rem;
   font-size: 1.6em;
   padding: 1rem;
@@ -204,11 +198,11 @@ main {
   transition: all 0.2s;
 }
 
-.form__signup-input:focus {
+.form__auth-input:focus {
   box-shadow: 0px 0.2rem 0.5rem #74747466;
 }
 
-.form__signup-icon {
+.form__auth-icon {
   position: absolute;
   width: 2rem;
   height: 2rem;
@@ -217,17 +211,19 @@ main {
   right: 1rem;
 }
 
-.form__signup-forgot {
+.form__auth-forgot {
   display: block;
+  margin-bottom: 0.5rem;
   text-align: center;
+  font-weight: 700;
   font-size: 1.2rem;
   text-decoration: none;
-  color: #000;
+  color: #0084ff;
 }
 
-.form__signup-btn {
+.form__auth-btn {
   display: block;
-  margin: 1rem auto;
+  margin: 1rem auto 0;
   border: 2px solid #0084ff;
   background-color: #0084ff;
   color: #fff;
@@ -239,20 +235,21 @@ main {
   transition: all 0.2s;
 }
 
-.form__signup-btn:hover {
+.form__auth-btn:hover {
   background: none;
   border: 2px solid #0084ff;
   background-color: var(--background-color-secondary);
   color: #0084ff;
 }
 
-.form__signup-register {
+.form__auth-sign {
+  margin-top: 1rem;
   font-size: 1.2rem;
   text-align: center;
   color: var(--text-primary-color);
 }
 
-.form__signup-register a {
+.form__auth-sign a {
   text-decoration: none;
   color: #0084ff;
   font-weight: 700;

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { useForm, useField, useResetForm } from "vee-validate";
 import * as yup from "yup";
 import { useStore } from "vuex";
@@ -23,11 +23,8 @@ const { value: email, errorMessage: emailError } = useField("email");
 const { value: password, errorMessage: passwordError } = useField("password");
 
 const store = useStore();
-onMounted(() => {
-  store.commit("errorMsg", "");
-});
+
 const loading = computed(() => store.state.loading);
-const error = computed(() => store.state.errorMsg);
 
 // Submit form
 const loginUser = handleSubmit((values) => {
@@ -42,35 +39,35 @@ let passVisible = ref(false);
 </script>
 
 <template>
-  <main class="container">
-    <form class="form__box" @submit.prevent="loginUser">
+  <main class="container auth">
+    <form class="form__auth" @submit.prevent="loginUser">
       <Loading
         v-model:active="loading"
         :can-cancel="false"
         :is-full-page="true"
       />
-      <h1 class="form__signup-header">Zaloguj się</h1>
-      <div class="form__signup-group">
-        <label for="email" class="form__signup-label">Adres e-mail</label>
+      <h1 class="form__auth-header">Zaloguj się</h1>
+      <div class="form__auth-group">
+        <label for="email" class="form__auth-label">Adres e-mail</label>
         <input
           v-model="email"
           id="email"
           type="email"
-          class="form__signup-input"
+          class="form__auth-input"
         />
         <span class="error-msg">{{ emailError }}</span>
       </div>
-      <div class="form__signup-group">
-        <label for="password" class="form__signup-label">Hasło</label>
+      <div class="form__auth-group">
+        <label for="password" class="form__auth-label">Hasło</label>
         <input
           v-model="password"
           :type="!passVisible ? 'password' : 'text'"
           id="password"
-          class="form__signup-input"
+          class="form__auth-input"
         />
         <span class="error-msg">{{ passwordError }}</span>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisible = !passVisible"
           v-if="!passVisible"
@@ -81,7 +78,7 @@ let passVisible = ref(false);
           />
         </svg>
         <svg
-          class="form__signup-icon"
+          class="form__auth-icon"
           viewBox="0 0 24 24"
           @click.prevent="passVisible = !passVisible"
           v-if="passVisible"
@@ -92,9 +89,11 @@ let passVisible = ref(false);
           />
         </svg>
       </div>
-      <!-- <a href="#" class="form__signup-forgot">Zapomniałeś hasła?</a> -->
-      <button type="Submit" class="form__signup-btn">Zaloguj się</button>
-      <p class="form__signup-register">
+      <router-link class="form__auth-forgot" :to="{ name: 'ForgotPassword' }"
+        >Zapomniałeś hasła?</router-link
+      >
+      <button type="Submit" class="form__auth-btn">Zaloguj się</button>
+      <p class="form__auth-sign">
         Nie masz konta?
         <router-link :to="{ name: 'Register' }">Zarejestruj się</router-link>
       </p>
@@ -102,115 +101,4 @@ let passVisible = ref(false);
   </main>
 </template>
 
-<style scoped>
-main {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 4rem;
-}
-
-.form__box {
-  width: 100%;
-  max-width: 45rem;
-  padding: 3rem;
-  background-color: var(--background-color-secondary);
-  border-radius: 1rem;
-  box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px;
-  transition: background-color 0.2s;
-}
-
-.form__signup-header {
-  font-size: 2.6rem;
-  font-weight: 400;
-  color: var(--text-primary-color);
-}
-
-.form__signup-group {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  margin: 1.5rem 0;
-}
-
-.form__signup-group:first-of-type {
-  margin-top: 3rem;
-}
-
-.form__signup-label {
-  font-size: 1.4rem;
-  font-weight: 400;
-  color: #0084ff;
-}
-
-.form__signup-input {
-  margin-top: 0.5rem;
-  font-size: 1.6rem;
-  padding: 1rem;
-  outline: none;
-  border: none;
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
-  transition: all 0.2s;
-}
-
-.form__signup-input:focus {
-  box-shadow: 0px 0.2rem 0.5rem #74747466;
-}
-
-.form__signup-icon {
-  position: absolute;
-  width: 2rem;
-  height: 2rem;
-  color: var(--text-primary-color);
-  top: 3.16rem;
-  right: 1rem;
-}
-
-.form__signup-forgot {
-  display: block;
-  text-align: center;
-  font-size: 1.2rem;
-  text-decoration: none;
-  color: #000;
-}
-
-.form__signup-btn {
-  display: block;
-  margin: 1rem auto;
-  border: 2px solid #0084ff;
-  background-color: #0084ff;
-  color: #fff;
-  border-radius: 2rem;
-  padding: 1rem 2rem;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.form__signup-btn:hover {
-  background: none;
-  border: 2px solid #0084ff;
-  background-color: var(--background-color-secondary);
-  color: #0084ff;
-}
-
-.form__signup-register {
-  font-size: 1.2rem;
-  text-align: center;
-  color: var(--text-primary-color);
-}
-
-.form__signup-register a {
-  text-decoration: none;
-  color: #0084ff;
-  font-weight: 700;
-}
-
-.error-msg {
-  margin-top: 0.5rem;
-  color: #ff3a3a;
-  font-size: 1.2rem;
-}
-</style>
+<style></style>

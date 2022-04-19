@@ -1,9 +1,28 @@
 <script setup>
-import AppNav from "../src/components/Nav.vue";
+import AppNav from "./components/Nav.vue";
 import { ref, computed } from "vue";
 import { useStore } from "vuex";
+import { supabase } from "./supabase/supabase";
+import router from "./router/index";
 
 const store = useStore();
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") {
+    const fullPath = router.currentRoute.value.fullPath;
+    const urlSearchParams = new URLSearchParams(fullPath);
+    const searchQuery = Object.fromEntries(urlSearchParams.entries());
+    setTimeout(() => {
+      router.push({
+        name: "ResetPassword",
+        query: searchQuery,
+      });
+    }, 100);
+  } else {
+    store.commit("setUser", session);
+  }
+});
+
 const success = computed(() => store.state.successMsg);
 const error = computed(() => store.state.errorMsg);
 </script>
