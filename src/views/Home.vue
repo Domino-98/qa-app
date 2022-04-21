@@ -1,7 +1,8 @@
 <script setup>
-import { reactive, ref, computed } from "vue";
+import { reactive, ref, computed, onMounted, onUnmounted } from "vue";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
+import QuestionItem from "../components/QuestionItem.vue";
 
 const store = useStore();
 const user = supabase.auth.user();
@@ -11,11 +12,55 @@ let loading = ref(false);
 let activeFilter = ref("recent");
 let searched = ref(false);
 let filteredByTag = ref(false);
+const scrollComponent = ref(null);
+let startIndex = ref(0);
+let lastIndex = ref(9);
+let scrolledToBottom = ref(false);
 
-async function getQuestions() {
+onMounted(() => {
+  window.addEventListener("scroll", handleScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("scroll", handleScroll);
+});
+
+// Infinite scroll
+const handleScroll = (e) => {
+  let element = scrollComponent.value;
+  if (element.getBoundingClientRect().bottom < window.innerHeight) {
+    if (!scrolledToBottom.value) {
+      scrolledToBottom.value = true;
+      console.log("bottom");
+      if (activeFilter.value === "recent") getQuestions(false, "recent");
+      else if (activeFilter.value === "noAnswers")
+        getQuestions(false, "noAnswers");
+      else if (activeFilter.value === "answered")
+        getQuestions(false, "answered");
+      else if (searched.value) searchQuestions(false);
+
+      setTimeout(() => {
+        scrolledToBottom.value = false;
+      }, 500);
+    }
+  }
+};
+
+// Fetch data / filter
+async function getQuestions(tabClicked, filter) {
+  if (tabClicked) {
+    scrolledToBottom.value = false;
+    questions.value = [];
+    startIndex.value = 0;
+    lastIndex.value = 9;
+  }
+  if (scrolledToBottom.value) {
+    startIndex.value = lastIndex.value + 1;
+    lastIndex.value += 10;
+  }
   loading.value = true;
   searched.value = false;
-  activeFilter.value = "recent";
+  activeFilter.value = filter;
   filteredByTag.value = false;
   try {
     const { data, error } = await supabase
@@ -34,24 +79,46 @@ async function getQuestions() {
 		  )
 	  `
       )
+      .range(startIndex.value, lastIndex.value)
       .order("created_at", { ascending: false });
 
-    console.log(data);
-    questions.value = data;
+    if (data.length > 0) {
+      if (filter === "recent") {
+        questions.value.push(...data);
+      } else if (filter === "noAnswers") {
+        data.forEach((question) => {
+          if (question.answers.length === 0) {
+            questions.value.push(question);
+          }
+        });
+      } else if (filter === "answered") {
+        data.forEach((question) => {
+          if (question.answers.length > 0) {
+            questions.value.push(question);
+          }
+        });
+      }
 
-    updateQuestionUpvotes();
-    filterAnswersOnly();
+      if (questions.value.length < 10) {
+        startIndex.value = lastIndex.value + 1;
+        lastIndex.value += 10;
+        getQuestions(false, activeFilter.value);
+      }
 
-    loading.value = false;
+      console.log(activeFilter.value);
 
-    console.log(questions.value);
+      updateQuestionVotes();
+      filterAnswersOnly();
+    }
   } catch (error) {
     console.log(error);
   }
+  loading.value = false;
 }
 
-getQuestions();
+getQuestions(false, "recent");
 
+// Filter answers with no parent_id
 function filterAnswersOnly() {
   questions.value.forEach((question) => {
     question.answersWithoutParent = question.answers.filter(
@@ -60,7 +127,102 @@ function filterAnswersOnly() {
   });
 }
 
-function updateQuestionUpvotes() {
+// Search
+let search = ref("");
+
+async function searchQuestions(submitted) {
+  if (submitted) {
+    scrolledToBottom.value = false;
+    questions.value = [];
+    startIndex.value = 0;
+    lastIndex.value = 9;
+  }
+  if (scrolledToBottom.value) {
+    startIndex.value = lastIndex.value + 1;
+    lastIndex.value += 10;
+  }
+  loading.value = true;
+  searched.value = true;
+  activeFilter.value = "";
+  filteredByTag.value = false;
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .select(
+        `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  *
+		  ),
+		  votes_question (
+			  *
+		  ) `
+      )
+      .textSearch("name", `${search.value}`)
+      .range(startIndex.value, lastIndex.value)
+      .order("created_at", { ascending: false });
+
+    questions.value.push(...data);
+
+    updateQuestionVotes();
+    filterAnswersOnly();
+
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+  loading.value = false;
+}
+
+// Filter by tag
+let tagName = ref("");
+
+async function filterByTag(tag) {
+  loading.value = true;
+  searched.value = false;
+  activeFilter.value = "";
+  tagName.value = tag;
+  filteredByTag.value = true;
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .select(
+        `*
+	  ,
+	 	 views (
+			  view_count
+		  ),
+		  answers (
+			  *
+		  ),
+		  votes_question (
+			  *
+		  ) `
+      )
+      .order("created_at", { ascending: false });
+
+    questions.value = [];
+
+    data.forEach((question) => {
+      if (question.tags.includes(tag)) {
+        questions.value.push(question);
+      }
+    });
+
+    updateQuestionVotes();
+    filterAnswersOnly();
+    if (error) console.log(error);
+  } catch (error) {
+    console.log(error);
+  }
+  loading.value = false;
+}
+
+// Update question votes
+function updateQuestionVotes() {
   questions.value.forEach((question) => {
     question.downvotes = question.votes_question.filter(
       (obj) => obj.downvoted === true
@@ -89,324 +251,6 @@ function updateQuestionUpvotes() {
     }
   });
 }
-
-// Display vote error
-function displayVoteError(question) {
-  if (!user) {
-    store.commit(
-      "errorMsg",
-      "Musisz być zalogowany by móc zagłosować na pytanie!"
-    );
-  } else if (question.owner_user_id == user.id) {
-    store.commit("errorMsg", "Nie możesz głosować na swoje pytania!");
-  }
-  setTimeout(() => {
-    store.commit("errorMsg", "");
-  }, 3000);
-}
-
-// Upvote question
-async function upvoteQuestion(question) {
-  displayVoteError(question);
-  if (user && question.owner_user_id != user.id) {
-    try {
-      const { data: upvoted, error } = await supabase
-        .from("votes_question")
-        .select("upvoted")
-        .is("upvoted", true)
-        .match({ question_id: question.id, user_id: user.id });
-
-      if (upvoted[0]) {
-        try {
-          const { error, data } = await supabase.from("votes_question").upsert(
-            {
-              question_id: question.id,
-              user_id: user.id,
-              upvoted: false,
-            },
-            { onConflict: "question_id,user_id" }
-          );
-          if (error) {
-            console.log(error);
-          }
-          question.upvoted = false;
-          question.score--;
-        } catch (error) {
-          console.log(error);
-        }
-      } else {
-        try {
-          const { error, data } = await supabase.from("votes_question").upsert(
-            {
-              question_id: question.id,
-              user_id: user.id,
-              upvoted: true,
-              downvoted: false,
-            },
-            { onConflict: "question_id,user_id" }
-          );
-          if (error) {
-            console.log(error);
-          }
-          if (question.downvoted) {
-            question.score += 2;
-          } else {
-            question.score++;
-          }
-          question.upvoted = true;
-          question.downvoted = false;
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-}
-
-// Downvote question
-async function downvoteQuestion(question) {
-  displayVoteError(question);
-  if (user && question.owner_user_id != user.id) {
-    try {
-      const { data: downvoted, error } = await supabase
-        .from("votes_question")
-        .select("downvoted")
-        .is("downvoted", true)
-        .match({ question_id: question.id, user_id: user.id });
-
-      if (downvoted[0]) {
-        try {
-          const { error, data } = await supabase.from("votes_question").upsert(
-            {
-              question_id: question.id,
-              user_id: user.id,
-              downvoted: false,
-            },
-            { onConflict: "question_id,user_id" }
-          );
-          if (error) {
-            console.log(error);
-          }
-          question.downvoted = false;
-          question.score++;
-        } catch (error) {
-          console.log(error);
-        }
-      } else {
-        try {
-          const { error, data } = await supabase.from("votes_question").upsert(
-            {
-              question_id: question.id,
-              user_id: user.id,
-              downvoted: true,
-              upvoted: false,
-            },
-            { onConflict: "question_id,user_id" }
-          );
-          if (error) {
-            console.log(error);
-          }
-          if (question.upvoted) {
-            question.score -= 2;
-          } else {
-            question.score--;
-          }
-          question.downvoted = true;
-          question.upvoted = false;
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-}
-
-// Search
-let search = ref("");
-
-async function searchQuestions() {
-  loading.value = true;
-  searched.value = true;
-  activeFilter.value = "";
-  filteredByTag.value = false;
-  try {
-    const { data, error } = await supabase
-      .from("questions")
-      .select(
-        `*
-	  ,
-	 	 views (
-			  view_count
-		  ),
-		  answers (
-			  *
-		  ),
-		  votes_question (
-			  *
-		  ) `
-      )
-      .textSearch("name", `${search.value}`);
-
-    questions.value = data;
-
-    console.log(search.value);
-    console.log(data);
-    loading.value = false;
-    updateQuestionUpvotes();
-    filterAnswersOnly();
-
-    if (error) console.log(error);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-// Filter by tag
-let tagName = ref("");
-
-async function filterByTag(tag) {
-  loading.value = true;
-  searched.value = false;
-  activeFilter.value = "";
-  tagName.value = tag;
-  filteredByTag.value = true;
-  try {
-    const { data, error } = await supabase.from("questions").select(
-      `*
-	  ,
-	 	 views (
-			  view_count
-		  ),
-		  answers (
-			  *
-		  ),
-		  votes_question (
-			  *
-		  ) `
-    );
-
-    questions.value = data;
-
-    questions.value = [];
-
-    data.forEach((question) => {
-      if (question.tags.includes(tag)) {
-        questions.value.push(question);
-      }
-    });
-
-    updateQuestionUpvotes();
-    filterAnswersOnly();
-    loading.value = false;
-    if (error) console.log(error);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-// Filters
-async function noAnswers() {
-  loading.value = true;
-  activeFilter.value = "noAnswers";
-  searched.value = false;
-  filteredByTag.value = false;
-  try {
-    const { data, error } = await supabase.from("questions").select(
-      `*
-	  ,
-	 	 views (
-			  view_count
-		  ),
-		  answers (
-			  *
-		  ),
-		  votes_question (
-			  *
-		  ) `
-    );
-
-    questions.value = [];
-
-    data.forEach((question) => {
-      if (question.answers.length === 0) {
-        questions.value.push(question);
-      }
-    });
-    updateQuestionUpvotes();
-    filterAnswersOnly();
-    loading.value = false;
-    if (error) console.log(error);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function answered() {
-  loading.value = true;
-  activeFilter.value = "answered";
-  searched.value = false;
-  filteredByTag.value = false;
-  try {
-    const { data, error } = await supabase.from("questions").select(
-      `*
-	  ,
-	 	 views (
-			  view_count
-		  ),
-		  answers (
-			  *
-		  ),
-		  votes_question (
-			  *
-		  ) `
-    );
-
-    questions.value = [];
-
-    data.forEach((question) => {
-      if (question.answers.length > 0) {
-        questions.value.push(question);
-      }
-    });
-    updateQuestionUpvotes();
-    filterAnswersOnly();
-    loading.value = false;
-    if (error) console.log(error);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-function timeSince(date) {
-  var seconds = Math.floor((new Date() - date) / 1000);
-
-  var interval = seconds / 31536000;
-
-  if (interval > 1) {
-    return Math.floor(interval) + " lata";
-  }
-  interval = seconds / 2592000;
-  if (interval > 1) {
-    return Math.floor(interval) + " miesięcy";
-  }
-  interval = seconds / 86400;
-  if (interval > 1) {
-    return Math.floor(interval) + " dni";
-  }
-  interval = seconds / 3600;
-  if (interval > 1) {
-    return Math.floor(interval) + " godzin";
-  }
-  interval = seconds / 60;
-  if (interval > 1) {
-    return Math.floor(interval) + " minut";
-  }
-  return Math.floor(seconds) + " sekund";
-}
 </script>
 
 <template>
@@ -415,7 +259,7 @@ function timeSince(date) {
       <div class="filters">
         <button
           class="filters__btn"
-          @click.prevent="getQuestions"
+          @click.prevent="getQuestions(true, 'recent')"
           :class="{ active: activeFilter == 'recent' }"
         >
           <svg viewBox="0 0 24 24" class="filters__btn-icon">
@@ -426,7 +270,7 @@ function timeSince(date) {
           ><span class="filters__btn-text">Ostatnio zadane</span>
         </button>
         <button
-          @click.prevent="noAnswers"
+          @click.prevent="getQuestions(true, 'noAnswers')"
           class="filters__btn"
           :class="{ active: activeFilter == 'noAnswers' }"
         >
@@ -438,7 +282,7 @@ function timeSince(date) {
           ><span class="filters__btn-text">Bez odpowiedzi</span>
         </button>
         <button
-          @click.prevent="answered"
+          @click.prevent="getQuestions(true, 'answered')"
           class="filters__btn"
           :class="{ active: activeFilter == 'answered' }"
         >
@@ -449,7 +293,7 @@ function timeSince(date) {
             /></svg
           ><span class="filters__btn-text">Z odpowiedzią</span>
         </button>
-        <form class="filters__search" @submit.prevent="searchQuestions">
+        <form class="filters__search" @submit.prevent="searchQuestions(true)">
           <input
             v-model="search"
             type="text"
@@ -472,164 +316,29 @@ function timeSince(date) {
         <h1 class="questions__header">
           Pytania
           <span v-if="searched" class="searched"
-            >(słowo kluczowe: <span class="display-name">{{ search }}</span
+            >( słowo kluczowe: <span class="display-name">{{ search }}</span
             >)</span
           >
           <span v-if="filteredByTag" class="searched"
-            >(tag: <span class="display-name">{{ tagName }}</span
+            >( tag: <span class="display-name">{{ tagName }}</span
             >)</span
           >
         </h1>
+
+        <p v-if="questions.length == 0 && !loading" class="info">Brak pytań</p>
+        <ul class="questions__list" ref="scrollComponent">
+          <QuestionItem
+            v-for="question in questions"
+            :key="question.id"
+            :question="question"
+            @filter-by-tag="filterByTag"
+          />
+        </ul>
         <img
           v-if="loading"
           src="../assets/ripple-loading.svg"
           class="loading-spinner"
         />
-        <p v-if="questions.length == 0 && !loading" class="info">Brak pytań</p>
-        <ul class="questions__list">
-          <li
-            v-for="question in questions"
-            :key="question.id"
-            class="questions__item"
-          >
-            <div class="questions__item-votes">
-              <div>
-                <svg
-                  v-if="!question.upvoted"
-                  @click.prevent="upvoteQuestion(question)"
-                  class="questions__item-votes-icon questions__item-votes-icon--up"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M5,9V21H1V9H5M9,21A2,2 0 0,1 7,19V9C7,8.45 7.22,7.95 7.59,7.59L14.17,1L15.23,2.06C15.5,2.33 15.67,2.7 15.67,3.11L15.64,3.43L14.69,8H21C22.11,8 23,8.9 23,10V12C23,12.26 22.95,12.5 22.86,12.73L19.84,19.78C19.54,20.5 18.83,21 18,21H9M9,19H18.03L21,12V10H12.21L13.34,4.68L9,9.03V19Z"
-                  />
-                </svg>
-                <svg
-                  v-else
-                  @click.prevent="upvoteQuestion(question)"
-                  class="questions__item-votes-icon questions__item-votes-icon--up"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M23,10C23,8.89 22.1,8 21,8H14.68L15.64,3.43C15.66,3.33 15.67,3.22 15.67,3.11C15.67,2.7 15.5,2.32 15.23,2.05L14.17,1L7.59,7.58C7.22,7.95 7,8.45 7,9V19A2,2 0 0,0 9,21H18C18.83,21 19.54,20.5 19.84,19.78L22.86,12.73C22.95,12.5 23,12.26 23,12V10M1,21H5V9H1V21Z"
-                  />
-                </svg>
-              </div>
-              <div class="questions__item-votes-score">
-                <span>{{ question.score }}</span>
-              </div>
-              <div>
-                <svg
-                  v-if="!question.downvoted"
-                  @click.prevent="downvoteQuestion(question)"
-                  class="questions__item-votes-icon questions__item-votes-icon--down"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M19,15V3H23V15H19M15,3A2,2 0 0,1 17,5V15C17,15.55 16.78,16.05 16.41,16.41L9.83,23L8.77,21.94C8.5,21.67 8.33,21.3 8.33,20.88L8.36,20.57L9.31,16H3C1.89,16 1,15.1 1,14V12C1,11.74 1.05,11.5 1.14,11.27L4.16,4.22C4.46,3.5 5.17,3 6,3H15M15,5H5.97L3,12V14H11.78L10.65,19.32L15,14.97V5Z"
-                  />
-                </svg>
-                <svg
-                  v-else
-                  @click.prevent="downvoteQuestion(question)"
-                  class="questions__item-votes-icon questions__item-votes-icon--down"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M19,15H23V3H19M15,3H6C5.17,3 4.46,3.5 4.16,4.22L1.14,11.27C1.05,11.5 1,11.74 1,12V14A2,2 0 0,0 3,16H9.31L8.36,20.57C8.34,20.67 8.33,20.77 8.33,20.88C8.33,21.3 8.5,21.67 8.77,21.94L9.83,23L16.41,16.41C16.78,16.05 17,15.55 17,15V5C17,3.89 16.1,3 15,3Z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <router-link
-                tag="p"
-                :to="{
-                  name: 'Question',
-                  hash: '#question',
-                  params: { id: question.id },
-                }"
-                class="questions__item-owner-date"
-              >
-                <span>Zadane przez</span>
-                <span class="display-name">{{
-                  question.owner_display_name
-                }}</span>
-                <span>
-                  {{
-                    timeSince(
-                      new Date(
-                        Date.now() -
-                          (new Date().getTime() -
-                            new Date(question.created_at).getTime())
-                      )
-                    )
-                  }}
-                </span>
-                <span>
-                  temu,
-                  {{ new Date(question.created_at).toLocaleDateString() }},
-                  {{
-                    new Date(question.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  }}
-                </span>
-              </router-link>
-              <router-link
-                :to="{
-                  name: 'Question',
-                  params: { id: question.id },
-                }"
-                class="questions__item-title"
-                >{{ question.name }}</router-link
-              >
-              <div class="questions__item-info">
-                <a
-                  @click.prevent="filterByTag(tag)"
-                  v-for="tag in question.tags"
-                  :key="tag"
-                  href="#"
-                  class="questions__item-tag"
-                  >{{ tag }}</a
-                >
-                <router-link
-                  v-if="question.answers"
-                  tag="span"
-                  :to="{
-                    name: 'Question',
-                    params: { id: question.id },
-                  }"
-                  class="questions__item-answers"
-                  ><span
-                    >{{
-                      question.answersWithoutParent.length
-                    }}
-                    odpowiedzi,</span
-                  ></router-link
-                >
-                <router-link
-                  v-if="question.views[0]"
-                  tag="span"
-                  :to="{
-                    name: 'Question',
-                    params: { id: question.id },
-                  }"
-                  class="questions__item-views"
-                  ><span
-                    >{{ question.views[0].view_count }} wyświetleń</span
-                  ></router-link
-                >
-                <span v-else class="questions__item-views">0 wyświetleń</span>
-              </div>
-            </div>
-          </li>
-        </ul>
       </section>
     </main>
   </div>
@@ -725,90 +434,6 @@ main {
   color: var(--text-primary-color);
 }
 
-.questions__list {
-}
-
-.questions__item {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
-  list-style-type: none;
-  border-bottom: 2px solid var(--accent-color);
-}
-
-.questions__item:last-child {
-  border-bottom: none;
-}
-
-.questions__item-title {
-  text-decoration: none;
-  color: var(--text-primary-color);
-  font-size: 2rem;
-  font-weight: 400;
-}
-
-.questions__item-votes {
-  margin-right: 2rem;
-  color: var(--text-primary-color);
-}
-
-.questions__item-votes-score {
-  text-align: center;
-  font-size: 2rem;
-  font-weight: 400;
-}
-
-.questions__item-votes-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  cursor: pointer;
-}
-
-.questions__item-votes-icon--up {
-  color: #3ed73e;
-}
-
-.questions__item-votes-icon--down {
-  color: #ff3a3a;
-}
-
-.questions__item-info span {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 1.25rem;
-  row-gap: 0.5rem;
-  color: var(--text-primary-color);
-}
-
-.questions__item-tag {
-  text-decoration: none;
-  color: var(--primary-color);
-  background-color: tranparent;
-  border: 2px solid var(--primary-color);
-  border-radius: 1.5rem;
-  padding: 0.25rem 0.75rem;
-  margin-right: 0.5rem;
-  font-size: 1.2rem;
-}
-
-.questions__item-owner-date {
-  display: block;
-  text-decoration: none;
-  color: #7f7f7f;
-  margin-bottom: 1.25rem;
-  font-size: 1.1rem;
-}
-
-.questions__item-answers,
-.questions__item-views {
-  display: inline-block;
-  text-decoration: none;
-  color: var(--text-primary-color);
-  margin-right: 0.5rem;
-  font-size: 1.2em;
-}
-
 .info {
   text-align: center;
   margin-top: 2.5rem;
@@ -817,15 +442,9 @@ main {
   color: var(--text-primary-color);
 }
 
-.display-name {
-  display: inline-block;
-  margin: 0 0.5rem;
-  color: var(--primary-color);
-}
-
 .loading-spinner {
   display: block;
-  margin: 4rem auto 0;
+  margin: 2rem auto 0;
   text-align: center;
   width: 7.5rem;
   height: 7.5rem;
@@ -835,5 +454,11 @@ main {
   display: inline-block;
   vertical-align: middle;
   font-size: 1.4rem;
+}
+
+.display-name {
+  display: inline-block;
+  margin: 0 0.5rem;
+  color: var(--primary-color);
 }
 </style>
