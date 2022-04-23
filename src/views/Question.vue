@@ -320,31 +320,29 @@ function updateAnswerVotes() {
   });
 }
 
-const username = ref("");
-
-// Get current username
-async function getUsername() {
-  if (user) {
-    const { data, error } = await supabase
-      .from("users")
-      .select("username")
-      .eq("id", user.id)
-      .single();
-
-    username.value = data.username;
-  }
-}
-
-getUsername();
+let username = ref("");
 
 // Submit form
-async function addAnswer() {
+async function addAnswer(event) {
+  console.log(username.value);
   if (!user) {
     store.commit("errorMsg", "Musisz być zalogowany by móc dodać odpowiedź!");
     setTimeout(() => {
       store.commit("errorMsg", "");
     }, 3000);
   } else {
+    // Get username
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      username.value = data.username;
+    } catch (error) {
+      console.log(error);
+    }
     // Add answer
     try {
       const { error } = await supabase.from("answers").insert([
@@ -358,6 +356,7 @@ async function addAnswer() {
       ]);
 
       getAnswers();
+      event.target[0].value = "";
     } catch (error) {
       console.log(error);
     }
@@ -757,19 +756,22 @@ async function bestAnswer(answer) {
               placeholder="Treść pytania..."
               name="content"
               id="content"
-              rows="5"
+              rows="4"
               class="question__edit-content"
               required
             ></textarea>
           </div>
-          <button v-if="editModeQuestion" class="question__btn-edit">
+          <button
+            v-if="editModeQuestion"
+            class="question__btn question__btn--edit"
+          >
             Edytuj pytanie
           </button>
         </form>
       </div>
 
       <section class="answers">
-        <form @submit.prevent="addAnswer" class="answers__add">
+        <form @submit.prevent="addAnswer($event)" class="answers__add">
           <label class="answers__label" for="answer"
             >Treść odpowiedzi
             <span v-show="!user">(Musisz być zalogowany)</span></label
@@ -818,16 +820,16 @@ async function bestAnswer(answer) {
 
 <style scoped>
 main {
+  transition: all 0.2s;
   min-height: calc(100vh - 6.5rem);
-  background-color: var(--background-color-secondary);
   box-shadow: 5px 0 5px -5px rgba(0, 0, 0, 0.2),
     -5px 0 5px -5px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s;
+  background-color: var(--background-color-secondary);
 }
 
 .info {
-  text-align: center;
   margin-top: 1.25rem;
+  text-align: center;
   font-size: 1.6rem;
   font-style: italic;
   color: var(--text-primary-color);
@@ -893,13 +895,13 @@ main {
 }
 
 .question__tag {
-  text-decoration: none;
-  color: var(--primary-color);
-  background-color: transparent;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.75rem;
   border: 2px solid var(--primary-color);
   border-radius: 1.5rem;
-  padding: 0.25rem 0.75rem;
-  margin-right: 0.5rem;
+  background-color: transparent;
+  text-decoration: none;
+  color: var(--primary-color);
   font-size: 1.2rem;
 }
 
@@ -933,40 +935,40 @@ main {
 }
 
 .answers__input {
-  font-family: inherit;
+  transition: all 0.2s;
   width: 100%;
   margin-top: 0.5rem;
-  font-size: 1.6rem;
   padding: 1rem;
   border: none;
+  border-radius: 0.5rem;
   background-color: var(--accent-color);
+  font-family: inherit;
+  font-size: 1.6rem;
   color: var(--text-primary-color);
   resize: none;
   outline: none;
-  transition: all 0.2s;
 }
 
-.answers__input:focus,
-.answers__input:focus + .answers__btn {
+.answers__input:focus {
   box-shadow: 0px 0.2rem 0.5rem #74747466;
 }
 
 .answers__btn {
+  align-self: start;
+  transition: all 0.2s;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
   border: 2px solid var(--btn-color);
+  border-radius: 1.5rem;
   background-color: var(--btn-color);
   color: #eee;
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
-  padding: 0.5rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
   font-size: 1.2rem;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .answers__btn:hover {
-  background: none;
   background-color: var(--background-color-secondary);
   color: var(--btn-color);
 }
@@ -983,21 +985,22 @@ main {
 
 /* Custom Select */
 .select-dropdown {
-  margin-top: 0.5rem;
-  display: inline-block;
   position: relative;
+  display: inline-block;
+  margin-top: 0.5rem;
+  border-radius: 0.5rem;
   background-color: var(--accent-color);
-  border-radius: 0.2rem;
 }
 
 .select-dropdown select {
+  padding: 8px 24px 8px 10px;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--accent-color);
   font-size: 1.4rem;
   font-weight: 400;
   color: var(--text-primary-color);
-  padding: 8px 24px 8px 10px;
   outline: none;
-  border: none;
-  background-color: var(--accent-color);
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -1005,16 +1008,16 @@ main {
 
 .select-dropdown select::focus,
 .select-dropdown select::active {
-  outline: none;
   box-shadow: none;
+  outline: none;
 }
 
 .select-dropdown::after {
   content: " ";
   position: absolute;
   top: 50%;
-  margin-top: -2px;
   right: 8px;
+  margin-top: -2px;
   width: 0;
   height: 0;
   border-left: 5px solid transparent;
@@ -1024,69 +1027,72 @@ main {
 
 .question__btns {
   position: absolute;
-  z-index: 10;
   top: 1rem;
   right: 1rem;
+  z-index: 10;
 }
 
 .question__edit,
 .question__delete {
-  background-color: var(--manage-btn-bg-color);
+  transition: all 0.2s;
   width: 4rem;
   height: 4rem;
   margin-left: 1rem;
-  border: none;
   padding: 1rem;
-  color: var(--text-primary-color);
+  border: none;
   border-radius: 50%;
-  cursor: pointer;
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
-  transition: all 0.2s;
+  background-color: var(--manage-btn-bg-color);
+  color: var(--text-primary-color);
+  cursor: pointer;
 }
 
 .question__edit:hover,
 .question__delete:hover {
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
 }
 
 .question__edit-name {
-  width: 100%;
-  font-size: 1.6em;
-  padding: 1rem;
-  outline: none;
-  border: none;
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   transition: all 0.2s;
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--accent-color);
+  font-size: 1.6em;
+  color: var(--text-primary-color);
+  outline: none;
 }
 
 .question__edit-tags {
-  padding: 0.5rem;
-  margin-right: 0.5em;
-  font-size: 1.2em;
-  outline: none;
-  border: none;
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   transition: all 0.2s;
+  margin-right: 0.5em;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--accent-color);
+  font-size: 1.2em;
+  color: var(--text-primary-color);
+  outline: none;
 }
 
 .question__edit-content {
+  transition: all 0.2s;
   width: 100%;
-  font-family: inherit;
   margin-top: 0.5rem;
-  font-size: 1.6rem;
   padding: 1rem;
   border: none;
+  border-radius: 0.5rem;
   background-color: var(--accent-color);
+  font-family: inherit;
+  font-size: 1.6rem;
   color: var(--text-primary-color);
   resize: none;
   outline: none;
-  transition: all 0.2s;
 }
 
 .question__edit-name:focus,
@@ -1099,34 +1105,33 @@ main {
   font-family: inherit;
 }
 
-.question__btn-edit {
+.question__btn--edit {
+  transition: all 0.2s;
   display: block;
   margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
   border: 2px solid var(--btn-color);
+  border-radius: 2rem;
   background-color: var(--btn-color);
   color: #eee;
   font-size: 1.2rem;
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
-.question__btn-edit:hover {
-  background: none;
+.question__btn--edit:hover {
   background-color: var(--background-color-secondary);
   color: var(--btn-color);
 }
 
 .question__modal-overlay {
   position: fixed;
-  z-index: 100;
   top: 0;
   left: 0;
   bottom: 0;
   right: 0;
+  z-index: 100;
   background-color: rgba(0, 0, 0, 0.4);
 }
 
@@ -1136,46 +1141,66 @@ main {
   right: 50%;
   transform: translate(50%, -50%);
   padding: 2rem;
+  border-radius: 1rem;
   background-color: var(--accent-color);
   color: var(--text-primary-color);
-  border-radius: 1rem;
   text-align: center;
 }
 
 .question__modal-content {
+  margin-top: 3rem;
   font-size: 1.8em;
   text-align: center;
-  margin-top: 3rem;
 }
 
 .question__modal-close {
   position: absolute;
+  top: 1rem;
+  right: 1rem;
   width: 3;
   height: 3rem;
   color: var(--text-primary-color);
   cursor: pointer;
-  top: 1rem;
-  right: 1rem;
 }
 
 .question__modal-btn {
+  transition: all 0.2s;
   margin-top: 2.5rem;
+  padding: 0.5rem 1rem;
   border: 2px solid #ff3636;
+  border-radius: 2rem;
   background-color: #ff3636;
   color: #eee;
   font-size: 1.2em;
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .question__modal-btn:hover {
-  background: none;
   border: 2px solid #ff3636;
   background-color: var(--accent-color);
   color: #ff3636;
+}
+
+@media screen and (max-width: 768px) {
+  .question {
+    padding: 1rem 2rem;
+  }
+
+  .answers {
+    padding: 1.5rem 2rem;
+  }
+
+  .question__btns {
+    right: 0;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .question__owner-date {
+    width: 70%;
+    font-size: 1.1rem;
+  }
 }
 </style>

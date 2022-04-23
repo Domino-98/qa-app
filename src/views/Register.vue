@@ -157,21 +157,21 @@ main.auth {
 }
 
 .form__auth {
+  transition: background-color 0.2s;
   width: 100%;
   max-width: 45rem;
   padding: 3rem;
-  background-color: var(--background-color-secondary);
   border-radius: 1rem;
   box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px;
-  transition: background-color 0.2s;
+  background-color: var(--background-color-secondary);
 }
 
 .form__auth-header {
   display: inline-block;
+  margin-bottom: 0.5rem;
   font-size: 2.4rem;
   font-weight: 400;
   color: var(--text-primary-color);
-  margin-bottom: 0.5rem;
 }
 
 .form__auth-group {
@@ -188,14 +188,15 @@ main.auth {
 }
 
 .form__auth-input {
-  margin-top: 0.5rem;
-  font-size: 1.6em;
-  padding: 1rem;
-  outline: none;
-  border: none;
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   transition: all 0.2s;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--accent-color);
+  font-size: 1.6em;
+  color: var(--text-primary-color);
+  outline: none;
 }
 
 .form__auth-input:focus {
@@ -204,11 +205,11 @@ main.auth {
 
 .form__auth-icon {
   position: absolute;
+  top: 3.16rem;
+  right: 1rem;
   width: 2rem;
   height: 2rem;
   color: var(--text-primary-color);
-  top: 3.16rem;
-  right: 1rem;
 }
 
 .form__auth-forgot {
@@ -223,21 +224,19 @@ main.auth {
 
 .form__auth-btn {
   display: block;
+  transition: all 0.2s;
   margin: 1rem auto 0;
+  padding: 1rem 2rem;
   border: 2px solid #0084ff;
+  border-radius: 2rem;
   background-color: #0084ff;
   color: #fff;
-  border-radius: 2rem;
-  padding: 1rem 2rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .form__auth-btn:hover {
-  background: none;
-  border: 2px solid #0084ff;
   background-color: var(--background-color-secondary);
   color: #0084ff;
 }
@@ -259,5 +258,11 @@ main.auth {
   margin-top: 0.5rem;
   color: #ff3a3a;
   font-size: 1.2rem;
+}
+
+@media screen and (max-width: 500px) {
+  .form__auth {
+    margin: 0 2rem;
+  }
 }
 </style>

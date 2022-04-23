@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Home from "../views/Home.vue";
 import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
-import ResetPassword from "../views/ResetPassword.vue";
+const ResetPassword = () => import("../views/ResetPassword.vue");
 import ForgotPassword from "../views/ForgotPassword.vue";
 import AddQuestion from "../views/AddQuestion.vue";
 import Question from "../views/Question.vue";

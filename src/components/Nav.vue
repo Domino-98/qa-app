@@ -1,13 +1,22 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, inject } from "vue";
 import { useStore } from "vuex";
+import { useRoute } from "vue-router";
+
+function scrollToTop() {
+  window.scrollTo(0, 0);
+}
 
 const store = useStore();
-
+const route = useRoute();
 const user = computed(() => store.state.user);
+
+let menuOpened = ref(false);
+let search = ref("");
 
 // Sign out user
 function signOut() {
+  menuOpened.value = !menuOpened.value;
   store.dispatch("signOutAction");
   console.log(user);
 }
@@ -62,13 +71,26 @@ const getMediaPreference = () => {
 const userTheme = ref(getTheme() || getMediaPreference());
 
 onMounted(() => setTheme(userTheme.value));
+
+const emitter = inject("emitter");
+
+function emitSearch(search) {
+  emitter.emit("searchQuestions", { submitted: true, searchValue: search });
+}
 </script>
 
 <template>
   <header class="header">
     <nav class="nav container">
-      <a href="#" class="nav__logo"
-        ><img class="nav__logo-icon" src="../assets/communication.png" />Q&A</a
+      <router-link
+        @click.prevent="menuOpened = false"
+        @click.native="scrollToTop"
+        :to="{ name: 'Home' }"
+        class="nav__logo"
+        ><img
+          class="nav__logo-icon"
+          src="../assets/communication.png"
+        />Q&A</router-link
       >
       <!-- Dark mode -->
       <svg
@@ -210,8 +232,88 @@ onMounted(() => setTheme(userTheme.value));
         </g>
       </svg>
 
+      <button
+        class="menu-btn"
+        @click.prevent="menuOpened = !menuOpened"
+        :class="{ opened: menuOpened }"
+        aria-label="Main Menu"
+      >
+        <svg width="40" height="40" viewBox="0 0 100 100">
+          <path
+            class="line line1"
+            d="M 20,29.000046 H 80.000231 C 80.000231,29.000046 94.498839,28.817352 94.532987,66.711331 94.543142,77.980673 90.966081,81.670246 85.259173,81.668997 79.552261,81.667751 75.000211,74.999942 75.000211,74.999942 L 25.000021,25.000058"
+          />
+          <path class="line line2" d="M 20,50 H 80" />
+          <path
+            class="line line3"
+            d="M 20,70.999954 H 80.000231 C 80.000231,70.999954 94.498839,71.182648 94.532987,33.288669 94.543142,22.019327 90.966081,18.329754 85.259173,18.331003 79.552261,18.332249 75.000211,25.000058 75.000211,25.000058 L 25.000021,74.999942"
+          />
+        </svg>
+      </button>
+
+      <Transition>
+        <div
+          class="menu-overlay"
+          @click.self="menuOpened = !menuOpened"
+          v-show="menuOpened"
+        ></div>
+      </Transition>
+      <Transition name="show">
+        <ul class="menu" v-show="menuOpened">
+          <form
+            v-show="route.name === 'Home'"
+            class="menu__search"
+            @submit.prevent="emitSearch(search), (menuOpened = !menuOpened)"
+          >
+            <input
+              v-model="search"
+              type="text"
+              class="menu__search-input"
+              placeholder="Wyszukaj pytanie"
+              required
+            />
+            <button type="submit" class="menu__search-btn">
+              <svg type="" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
+                />
+              </svg>
+            </button>
+          </form>
+          <router-link
+            @click.prevent="menuOpened = !menuOpened"
+            @click.native="scrollToTop"
+            :to="{ name: 'Home' }"
+            class="menu__item"
+            >Strona główna</router-link
+          >
+          <router-link
+            @click.prevent="
+              !user ? displayError() : null, (menuOpened = !menuOpened)
+            "
+            :to="{ name: 'AddQuestion' }"
+            class="menu__item"
+            >Zadaj pytanie</router-link
+          >
+          <router-link
+            @click.prevent="menuOpened = !menuOpened"
+            v-if="!user"
+            :to="{ name: 'Login' }"
+            class="menu__item"
+            >Zaloguj się</router-link
+          >
+          <a v-if="user" href="#" class="menu__item" @click.prevent="signOut"
+            >Wyloguj się</a
+          >
+        </ul>
+      </Transition>
+
       <div class="nav__btns">
-        <router-link :to="{ name: 'Home' }" class="nav__btn"
+        <router-link
+          :to="{ name: 'Home' }"
+          class="nav__btn"
+          @click.native="scrollToTop"
           >Strona główna</router-link
         >
         <router-link
@@ -235,18 +337,18 @@ onMounted(() => setTheme(userTheme.value));
 .header {
   position: sticky;
   top: 0px;
-  width: 100%;
-  background-color: var(--background-color-primary);
-  z-index: 10;
-  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
+  z-index: 100;
   transition: background-color 0.2s;
+  width: 100%;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
+  background-color: var(--background-color-primary);
 }
 
 .nav {
-  position: sticky;
+  display: flex;
+  align-items: center;
   width: 100%;
   margin: auto;
-  display: flex;
   padding: 1rem 0rem;
 }
 
@@ -254,13 +356,11 @@ onMounted(() => setTheme(userTheme.value));
   display: flex;
   align-items: center;
   margin-right: auto;
-  font-size: 2.6rem;
   background: -webkit-linear-gradient(rgb(0, 140, 255), rgb(0, 211, 218));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-size: 2.6rem;
   text-decoration: none;
-  /* text-shadow: 0px 4px 3px rgba(0, 0, 0, 0.4), 0px 8px 13px rgba(0, 0, 0, 0.1),
-    0px 18px 23px rgba(0, 0, 0, 0.1); */
 }
 
 .nav__logo-icon {
@@ -275,14 +375,14 @@ onMounted(() => setTheme(userTheme.value));
 }
 
 .nav__btn {
+  transition: all 0.2s;
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 1.5rem;
+  cursor: pointer;
+  text-decoration: none;
   color: var(--text-primary-color);
   font-size: 1.6rem;
-  border-radius: 1rem;
-  padding: 0.5rem 1.25rem;
-  cursor: pointer;
-  border: none;
-  text-decoration: none;
-  transition: all 0.2s;
 }
 
 .nav__btn:not(:last-child) {
@@ -290,8 +390,7 @@ onMounted(() => setTheme(userTheme.value));
 }
 
 .nav__btn:hover {
-  background-color: #00a2ff;
-  box-shadow: 0px 0.1rem 0.2rem #32adff;
+  background-color: var(--btn-color);
   color: #fff;
 }
 
@@ -331,5 +430,167 @@ svg.dark #clouds {
 }
 .dark-mode-btn g {
   cursor: pointer;
+}
+
+.menu-btn {
+  display: none;
+  width: 4.5rem;
+  height: 4.5rem;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-color: transparent;
+  z-index: 10;
+}
+
+.line {
+  fill: none;
+  stroke: var(--text-primary-color);
+  stroke-width: 6;
+  transition: stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.line1 {
+  stroke-dasharray: 60 207;
+  stroke-width: 5;
+}
+.line2 {
+  stroke-dasharray: 60 60;
+  stroke-width: 5;
+}
+.line3 {
+  stroke-dasharray: 60 207;
+  stroke-width: 5;
+}
+.opened .line1 {
+  stroke-dasharray: 90 207;
+  stroke-dashoffset: -134;
+  stroke-width: 5;
+}
+.opened .line2 {
+  stroke-dasharray: 1 60;
+  stroke-dashoffset: -30;
+  stroke-width: 5;
+}
+.opened .line3 {
+  stroke-dasharray: 90 207;
+  stroke-dashoffset: -134;
+  stroke-width: 5;
+}
+
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  display: none;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  display: none;
+  transform: translateX(0);
+  transition: all 0.25s;
+  width: 27.5rem;
+  height: 100%;
+  margin: 0;
+  padding: 8rem 0;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+  background-color: var(--background-color-primary);
+  list-style: none;
+}
+
+.menu__item {
+  display: block;
+  transition: all 0.25s;
+  padding: 1.2rem 2.4rem;
+  color: var(--text-primary-color);
+  font-size: 2rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.menu__item:hover {
+  background-color: var(--accent-color);
+}
+
+.menu__search {
+  position: relative;
+  flex: 3;
+  padding: 1.2rem 2.4rem;
+}
+
+.menu__search-input {
+  transition: all 0.2s;
+  width: 100%;
+  padding: 1rem;
+  padding-right: 3.5rem;
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
+  font-size: 1.6rem;
+}
+
+.menu__search-input:focus {
+  outline: none;
+}
+
+.menu__search-btn {
+  position: absolute;
+  width: 2.5rem;
+  height: 2.5rem;
+  right: 3.25rem;
+  top: 2rem;
+  border: none;
+  background-color: transparent;
+  color: var(--primary-color);
+}
+
+.show-enter-from,
+.show-leave-to {
+  transform: translateX(100%);
+}
+
+.show-enter-to,
+.show-leave-from {
+  transform: translateX(0%);
+}
+
+.show-enter-active {
+  transition: all 0.3s ease-in-out;
+}
+
+@media screen and (max-width: 1024px) {
+  .nav {
+    padding: 1rem 2rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .dark-mode-btn {
+    margin-right: 2.5rem;
+  }
+
+  .nav__btns {
+    display: none;
+  }
+
+  .menu-btn {
+    display: flex;
+  }
+
+  .menu {
+    display: block;
+  }
+
+  .menu-overlay {
+    display: block;
+  }
 }
 </style>

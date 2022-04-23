@@ -243,6 +243,8 @@ async function deleteAnswer(answerId) {
   }
 }
 
+let username = ref("");
+
 // Reply to answer
 async function addReply(event, answer) {
   if (!user) {
@@ -251,6 +253,18 @@ async function addReply(event, answer) {
       store.commit("errorMsg", "");
     }, 3000);
   } else {
+    // Get username
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      username.value = data.username;
+    } catch (error) {
+      console.log(error);
+    }
     // Add reply
     try {
       const { error } = await supabase.from("answers").insert([
@@ -260,7 +274,7 @@ async function addReply(event, answer) {
           question_id: route.params.id,
           created_at: new Date(),
           content: event.target[0].value,
-          user_display_name: answer.user_display_name,
+          user_display_name: username.value,
         },
       ]);
 
@@ -341,14 +355,14 @@ async function addReply(event, answer) {
         <textarea
           v-else
           v-model="answer.content"
-          class="answers__input-edit"
+          class="answers__input answers__input--edit"
           name="answer"
           id="answer"
           rows="3"
           placeholder="Treść odpowiedzi"
           required
         ></textarea>
-        <button v-if="answer.editMode" class="answers__btn-edit">
+        <button v-if="answer.editMode" class="answers__btn answers__btn--edit">
           Edytuj odpowiedź
         </button>
       </form>
@@ -440,7 +454,7 @@ async function addReply(event, answer) {
           class="replies__input"
           name="replies"
           id="replies"
-          rows="3"
+          rows="4"
           required
         ></textarea>
         <button class="replies__btn" type="submit">Dodaj komentarz</button>
@@ -471,7 +485,10 @@ async function addReply(event, answer) {
           :key="reply.id"
           class="replies__item"
         >
-          <form @submit.prevent="editAnswer(reply.id, reply.content)">
+          <form
+            class="replies__content"
+            @submit.prevent="editAnswer(reply.id, reply.content)"
+          >
             <p
               style="white-space: pre-wrap"
               v-if="!reply.editMode"
@@ -482,14 +499,17 @@ async function addReply(event, answer) {
             <textarea
               v-else
               v-model="reply.content"
-              class="replies__input"
+              class="replies__input replies__input--edit"
               name="reply"
               id="reply"
-              rows="3"
+              rows="5"
               placeholder="Treść odpowiedzi"
               required
             ></textarea>
-            <button v-if="reply.editMode" class="replies__btn-edit">
+            <button
+              v-if="reply.editMode"
+              class="replies__btn replies__btn--edit"
+            >
               Edytuj komentarz
             </button>
           </form>
@@ -586,8 +606,8 @@ async function addReply(event, answer) {
   flex-wrap: wrap;
   align-items: center;
   padding: 2rem 0;
-  list-style-type: none;
   border-top: 2px solid var(--accent-color);
+  list-style-type: none;
 }
 
 .answers__item:first-child {
@@ -600,10 +620,10 @@ async function addReply(event, answer) {
 
 .answers__item-content,
 .replies__item-content {
+  padding-right: 11.25rem;
   font-size: 1.6rem;
   color: var(--text-primary-color);
   word-break: break-all;
-  padding-right: 11.25rem;
 }
 
 .replies__item-content {
@@ -620,11 +640,11 @@ async function addReply(event, answer) {
   position: relative;
   width: -moz-calc(50% - 5rem);
   width: calc(50% - 5rem);
+  border-top: 2px solid var(--accent-color);
   margin-top: 0.5rem;
   margin-left: 3rem;
   padding: 1rem 0;
   list-style-type: none;
-  border-top: 2px solid var(--accent-color);
 }
 
 .replies__item:first-child {
@@ -632,18 +652,17 @@ async function addReply(event, answer) {
   border-top: none;
 }
 .answers__info {
+  margin-top: 1.25rem;
   color: #7f7f7f;
   font-size: 1.1rem;
-  margin-top: 1.25rem;
 }
 
 .replies__info {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  margin-top: 1.25rem;
   color: #7f7f7f;
   font-size: 1.1rem;
-  margin-top: 1.25rem;
-  align-items: flex-end;
 }
 
 .display-name {
@@ -666,64 +685,67 @@ async function addReply(event, answer) {
 }
 
 .answers__input,
-.answers__input-edit,
 .replies__input {
-  font-family: inherit;
   width: 100%;
+  transition: all 0.2s;
+  border-radius: 0.5rem;
   margin-top: 0.5rem;
-  font-size: 1.6rem;
   padding: 1rem;
   border: none;
   background-color: var(--accent-color);
   color: var(--text-primary-color);
-  resize: none;
+  font-size: 1.6rem;
+  font-family: inherit;
   outline: none;
-  transition: all 0.2s;
+  resize: none;
 }
 
 .answers__input:focus,
-.answers__input:focus + .answers__btn,
 .answers__input-edit:focus,
-.answers__input-edit:focus + .answers__btn,
-.replies__input:focus,
-.replies__input:focus + .replies__btn {
+.replies__input:focus {
   box-shadow: 0px 0.2rem 0.5rem #74747466;
-}
-
-.answers__input-edit {
-  width: 100%;
 }
 
 .answers__btn,
 .replies__btn {
+  align-self: start;
+  transition: all 0.2s;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 1.5rem;
   border: 2px solid var(--btn-color);
   background-color: var(--btn-color);
   color: #eee;
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
-  padding: 0.5rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
-  font-size: 1.2rem;
-  transition: all 0.2s;
+  font-size: 1.1rem;
+  cursor: pointer;
 }
 
-.replies__input,
-.replies__btn {
-  width: 25rem;
+.answers__input--edit {
+  width: 100%;
 }
 
 .replies__input {
+  width: 25rem;
   font-size: 1.3rem;
+}
+
+.replies__input--edit {
+  width: 20rem;
+}
+
+.replies__content {
+  display: flex;
+  flex-direction: column;
 }
 
 .answers__btn:hover,
 .replies__btn:hover {
-  background: none;
   background-color: var(--background-color-secondary);
   color: var(--btn-color);
 }
+
 .answers__btns {
   position: absolute;
   z-index: 10;
@@ -742,18 +764,18 @@ async function addReply(event, answer) {
 .answers__delete,
 .replies__edit,
 .replies__delete {
-  background-color: var(--manage-btn-bg-color);
+  transition: all 0.2s;
   width: 4rem;
   height: 4rem;
   margin-left: 1rem;
-  border: none;
   padding: 1rem;
-  color: var(--text-primary-color);
+  border: none;
   border-radius: 50%;
-  cursor: pointer;
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
-  transition: all 0.2s;
+  background-color: var(--manage-btn-bg-color);
+  color: var(--text-primary-color);
+  cursor: pointer;
 }
 
 .replies__edit,
@@ -767,10 +789,10 @@ async function addReply(event, answer) {
 .answers__delete:hover,
 .replies__edit:hover,
 .replies__delete:hover {
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px,
     rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+  background-color: var(--accent-color);
+  color: var(--text-primary-color);
 }
 
 .answers__best-btn,
@@ -778,11 +800,11 @@ async function addReply(event, answer) {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
+  transition: all 0.3s;
   width: 4rem;
   height: 4rem;
   color: #3ed73e;
   cursor: pointer;
-  transition: all 0.3s;
 }
 
 .answers__best-btn:hover {
@@ -790,9 +812,9 @@ async function addReply(event, answer) {
 }
 
 .best-answer {
+  padding: 1.5rem;
   border: 2px solid #51ff51;
   border-radius: 1rem;
-  padding: 1.5rem;
   background-image: linear-gradient(
     to bottom right,
     rgba(0, 255, 35, 0.1),
@@ -809,33 +831,6 @@ async function addReply(event, answer) {
   border-top: none;
 }
 
-.answers__btn-edit,
-.replies__btn-edit {
-  display: block;
-  margin-top: 0.75rem;
-  border: 2px solid var(--btn-color);
-  background-color: var(--btn-color);
-  color: #eee;
-  font-size: 1.2rem;
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.replies__btn-edit {
-  font-size: 1rem;
-}
-
-.answers__btn-edit:hover,
-.replies__btn-edit:hover {
-  background: none;
-  background-color: var(--background-color-secondary);
-  color: var(--btn-color);
-}
-
 .reply {
   display: flex;
 }
@@ -843,30 +838,28 @@ async function addReply(event, answer) {
 .reply__btn,
 .reply__info {
   display: block;
+  transition: all 0.2s;
   margin-top: 1.25rem;
   margin-right: 1.25rem;
+  padding: 0.5rem 0.75rem;
   border: 2px solid var(--btn-color);
+  border-radius: 1.5rem;
   background-color: var(--btn-color);
   color: #eee;
   font-size: 1rem;
-  border-radius: 1.5rem;
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .replied {
   display: block;
+  transition: all 0.5s ease-in-out;
   margin-top: 1.25rem;
   margin-right: 1.25rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #eee;
-  cursor: pointer;
-  text-align: center;
   border: 2px solid transparent;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 5px 0 rgba(255, 79, 20, 0.75);
   background-size: 500% 100%;
   background-position: 10% 0;
   background-image: linear-gradient(
@@ -876,9 +869,11 @@ async function addReply(event, answer) {
     #ff9857,
     #ff4912
   );
-  box-shadow: 0 1px 5px 0 rgba(255, 79, 20, 0.75);
-  border-radius: 1.5rem;
-  transition: all 0.5s ease-in-out;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  color: #eee;
+  cursor: pointer;
 }
 
 .reply__btn:hover,
@@ -890,7 +885,36 @@ async function addReply(event, answer) {
 
 .replied:hover {
   border: 2px solid transparent;
-  color: #eee;
   background-position: 90% 0;
+  color: #eee;
+}
+
+@media screen and (max-width: 768px) {
+  .replies__input--edit {
+    width: 17.5rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .replies__item {
+    width: 100%;
+  }
+
+  .replies__btns {
+    top: 0.5rem;
+    right: 3.5rem;
+  }
+
+  .replies__info {
+    width: 50%;
+  }
+
+  .answers__edit,
+  .answers__delete {
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 1rem;
+    background-color: var(--manage-btn-bg-color);
+  }
 }
 </style>

@@ -181,17 +181,19 @@ main {
 }
 
 .form__question {
+  transition: background-color 0.2s;
   width: 100%;
   max-width: 45rem;
   padding: 3rem;
-  background-color: var(--background-color-secondary);
   border-radius: 1rem;
   box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px;
-  transition: background-color 0.2s;
+  background-color: var(--background-color-secondary);
 }
 
 .form__question-header {
-  font-size: 2.6rem;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  font-size: 2.4rem;
   font-weight: 400;
   color: var(--text-primary-color);
 }
@@ -203,10 +205,6 @@ main {
   margin: 1.5rem 0;
 }
 
-.form__question-group:first-of-type {
-  margin-top: 3rem;
-}
-
 .form__question-label {
   font-size: 1.4rem;
   font-weight: 400;
@@ -214,28 +212,30 @@ main {
 }
 
 .form__question-input {
-  margin-top: 0.5rem;
-  font-size: 1.6em;
-  padding: 1rem;
-  outline: none;
-  border: none;
-  background-color: var(--accent-color);
-  color: var(--text-primary-color);
   transition: all 0.2s;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--accent-color);
+  font-size: 1.6em;
+  color: var(--text-primary-color);
+  outline: none;
 }
 
 .form__question-content {
-  font-family: inherit;
+  transition: all 0.2s;
   width: 100%;
   margin-top: 0.5rem;
-  font-size: 1.6em;
   padding: 1rem;
   border: none;
+  border-radius: 0.5rem;
   background-color: var(--accent-color);
+  font-family: inherit;
+  font-size: 1.6em;
   color: var(--text-primary-color);
   resize: none;
   outline: none;
-  transition: all 0.2s;
 }
 
 .form__question-input:focus,
@@ -244,22 +244,20 @@ main {
 }
 
 .form__question-btn {
+  transition: all 0.2s;
   display: block;
   margin: 1rem auto 0 auto;
+  padding: 1rem 2rem;
   border: 2px solid #0084ff;
+  border-radius: 2rem;
   background-color: #0084ff;
   color: #fff;
-  border-radius: 2rem;
-  padding: 1rem 2rem;
-  cursor: pointer;
   text-transform: uppercase;
   font-weight: 600;
-  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .form__question-btn:hover {
-  background: none;
-  border: 2px solid #0084ff;
   background-color: var(--background-color-secondary);
   color: #0084ff;
 }
@@ -272,13 +270,13 @@ main {
 .form__question-tag {
   display: inline-block;
   margin-top: 1rem;
-  text-decoration: none;
-  color: #fff;
-  background-color: #00a2ff;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.75rem;
   border: 2px solid #00a2ff;
   border-radius: 1rem;
-  padding: 0.25rem 0.75rem;
-  margin-right: 0.5rem;
+  background-color: #00a2ff;
+  text-decoration: none;
+  color: #fff;
   font-size: 1.2rem;
 }
 
@@ -286,5 +284,11 @@ main {
   margin-top: 0.5rem;
   color: #ff3b3b;
   font-size: 1.2rem;
+}
+
+@media screen and (max-width: 500px) {
+  .form__question {
+    margin: 0 2rem;
+  }
 }
 </style>

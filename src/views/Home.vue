@@ -3,6 +3,7 @@ import { reactive, ref, computed, onMounted, onUnmounted } from "vue";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
 import QuestionItem from "../components/QuestionItem.vue";
+import { inject } from "vue";
 
 const store = useStore();
 const user = supabase.auth.user();
@@ -16,6 +17,10 @@ const scrollComponent = ref(null);
 let startIndex = ref(0);
 let lastIndex = ref(9);
 let scrolledToBottom = ref(false);
+let search = ref("");
+let searchedValue = ref("");
+
+const emitter = inject("emitter");
 
 onMounted(() => {
   window.addEventListener("scroll", handleScroll);
@@ -37,7 +42,7 @@ const handleScroll = (e) => {
         getQuestions(false, "noAnswers");
       else if (activeFilter.value === "answered")
         getQuestions(false, "answered");
-      else if (searched.value) searchQuestions(false);
+      else if (searched.value) searchQuestions(false, searchedValue.value);
 
       setTimeout(() => {
         scrolledToBottom.value = false;
@@ -107,6 +112,8 @@ async function getQuestions(tabClicked, filter) {
 
       console.log(activeFilter.value);
 
+      console.log(questions.value);
+
       updateQuestionVotes();
       filterAnswersOnly();
     }
@@ -128,9 +135,13 @@ function filterAnswersOnly() {
 }
 
 // Search
-let search = ref("");
+emitter.on("searchQuestions", (params) => {
+  searchQuestions(params.submitted, params.searchValue);
+});
 
-async function searchQuestions(submitted) {
+async function searchQuestions(submitted, searchValue) {
+  searchedValue.value = searchValue;
+  console.log(searchedValue.value);
   if (submitted) {
     scrolledToBottom.value = false;
     questions.value = [];
@@ -161,11 +172,14 @@ async function searchQuestions(submitted) {
 			  *
 		  ) `
       )
-      .textSearch("name", `${search.value}`)
+      .textSearch("name", `${searchValue}`)
       .range(startIndex.value, lastIndex.value)
       .order("created_at", { ascending: false });
 
     questions.value.push(...data);
+
+    console.log(data);
+    console.log(questions.value);
 
     updateQuestionVotes();
     filterAnswersOnly();
@@ -293,7 +307,10 @@ function updateQuestionVotes() {
             /></svg
           ><span class="filters__btn-text">Z odpowiedzią</span>
         </button>
-        <form class="filters__search" @submit.prevent="searchQuestions(true)">
+        <form
+          class="filters__search"
+          @submit.prevent="searchQuestions(true, search)"
+        >
           <input
             v-model="search"
             type="text"
@@ -316,7 +333,8 @@ function updateQuestionVotes() {
         <h1 class="questions__header">
           Pytania
           <span v-if="searched" class="searched"
-            >( słowo kluczowe: <span class="display-name">{{ search }}</span
+            >( słowo kluczowe:
+            <span class="display-name">{{ searchedValue }}</span
             >)</span
           >
           <span v-if="filteredByTag" class="searched"
@@ -346,11 +364,11 @@ function updateQuestionVotes() {
 
 <style scoped>
 main {
+  transition: all 0.2s;
   min-height: calc(100vh - 6.5rem);
-  background-color: var(--background-color-secondary);
   box-shadow: 5px 0 5px -5px rgba(0, 0, 0, 0.2),
     -5px 0 5px -5px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s;
+  background-color: var(--background-color-secondary);
 }
 
 .filters {
@@ -363,44 +381,46 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: 0.2s all;
   padding: 2rem;
   border: 2px solid var(--background-color-secondary);
   background-color: var(--background-color-secondary);
   color: var(--text-primary-color);
   cursor: pointer;
-  transition: 0.2s all;
 }
 
 .filters__search {
   position: relative;
-  padding: 2rem;
   flex: 3;
+  padding: 2rem;
 }
 
 .filters__search-input {
+  transition: all 0.2s;
   width: 90%;
   padding: 1rem;
   padding-right: 3.5rem;
   border-radius: 1.5rem;
   border: none;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.25);
   background-color: var(--accent-color);
+  font-size: 1.3rem;
   color: var(--text-primary-color);
-  transition: all 0.2s;
 }
 
 .filters__search-input:focus {
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.3);
   outline: none;
-  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .filters__search-btn {
   position: absolute;
-  width: 2.5rem;
-  height: 2.5rem;
   right: 5.25rem;
   top: 2.5rem;
-  background-color: transparent;
+  width: 2.5rem;
+  height: 2.5rem;
   border: none;
+  background-color: transparent;
   color: var(--primary-color);
 }
 
@@ -414,10 +434,10 @@ main {
 }
 
 .filters__btn-icon {
-  color: var(--primary-color);
   width: 2rem;
   height: 2rem;
   margin-right: 0.25rem;
+  color: var(--primary-color);
 }
 
 .filters__btn-text {
@@ -435,8 +455,8 @@ main {
 }
 
 .info {
-  text-align: center;
   margin-top: 2.5rem;
+  text-align: center;
   font-size: 1.6rem;
   font-style: italic;
   color: var(--text-primary-color);
@@ -444,10 +464,10 @@ main {
 
 .loading-spinner {
   display: block;
-  margin: 2rem auto 0;
-  text-align: center;
   width: 7.5rem;
   height: 7.5rem;
+  margin: 2rem auto 0;
+  text-align: center;
 }
 
 .searched {
@@ -460,5 +480,37 @@ main {
   display: inline-block;
   margin: 0 0.5rem;
   color: var(--primary-color);
+}
+
+@media screen and (max-width: 768px) {
+  .questions {
+    padding: 1.5rem 2rem;
+  }
+
+  .filters__search-input {
+    width: 95%;
+  }
+
+  .filters__search-btn {
+    right: 4rem;
+    top: 2.6rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .filters__search {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .filters__btn {
+    flex-direction: column;
+  }
+
+  .filters__btn-icon {
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+  }
 }
 </style>

@@ -95,21 +95,23 @@ html {
   position: fixed;
   bottom: 2.5rem;
   left: 50%;
-  width: auto;
   z-index: 9999;
   transform: translate(-50%, -50%);
+  width: auto;
   margin: 0 auto;
-  font-size: 1.6rem;
-  color: #fff;
   padding: 1rem 2rem;
   border-radius: 0.5rem;
+  font-size: 1.6rem;
+  color: #fff;
 }
 
 .success {
+  text-align: center;
   background-color: #3ed73e;
 }
 
 .error {
+  text-align: center;
   background-color: #ff3a3a;
 }
 
@@ -132,5 +134,11 @@ html {
 .list-leave-to {
   opacity: 0;
   transform: translateY(5rem);
+}
+
+@media screen and (max-width: 768px) {
+  html {
+    font-size: 56.25%;
+  }
 }
 </style>

@@ -204,16 +204,14 @@ async function downvoteQuestion(question) {
         </svg>
       </div>
     </div>
-    <div>
-      <router-link
-        tag="p"
-        :to="{
-          name: 'Question',
-          hash: '#question',
-          params: { id: question.id },
-        }"
-        class="questions__item-owner-date"
-      >
+    <router-link
+      style="text-decoration: none"
+      :to="{
+        name: 'Question',
+        params: { id: question.id },
+      }"
+    >
+      <p class="questions__item-owner-date">
         <span>Zadane przez</span>
         <span class="display-name">{{ question.owner_display_name }}</span>
         <span>
@@ -237,51 +235,28 @@ async function downvoteQuestion(question) {
             })
           }}
         </span>
-      </router-link>
-      <router-link
-        :to="{
-          name: 'Question',
-          params: { id: question.id },
-        }"
-        class="questions__item-title"
-        >{{ question.name }}</router-link
-      >
+      </p>
+      <span class="questions__item-title">{{ question.name }}</span>
       <div class="questions__item-info">
         <a
-          @click="$emit('filterByTag', tag)"
+          @click.prevent="$emit('filterByTag', tag)"
           v-for="tag in question.tags"
           :key="tag"
           href="#"
           class="questions__item-tag"
           >{{ tag }}</a
         >
-        <router-link
-          v-if="question.answers"
-          tag="span"
-          :to="{
-            name: 'Question',
-            params: { id: question.id },
-          }"
-          class="questions__item-answers"
+        <span v-if="question.answers" class="questions__item-answers"
           ><span
             >{{ question.answersWithoutParent.length }} odpowiedzi,</span
-          ></router-link
+          ></span
         >
-        <router-link
-          v-if="question.views[0]"
-          tag="span"
-          :to="{
-            name: 'Question',
-            params: { id: question.id },
-          }"
-          class="questions__item-views"
-          ><span
-            >{{ question.views[0].view_count }} wyświetleń</span
-          ></router-link
+        <span v-if="question.views[0]" class="questions__item-views"
+          ><span>{{ question.views[0].view_count }} wyświetleń</span></span
         >
         <span v-else class="questions__item-views">0 wyświetleń</span>
       </div>
-    </div>
+    </router-link>
   </li>
 </template>
 
@@ -290,8 +265,8 @@ async function downvoteQuestion(question) {
   display: flex;
   align-items: center;
   padding: 2rem 0;
-  list-style-type: none;
   border-bottom: 2px solid var(--accent-color);
+  list-style-type: none;
 }
 
 .questions__item:last-child {
@@ -330,7 +305,7 @@ async function downvoteQuestion(question) {
   color: #ff3a3a;
 }
 
-.questions__item-info span {
+.questions__item-info {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -340,30 +315,30 @@ async function downvoteQuestion(question) {
 }
 
 .questions__item-tag {
-  text-decoration: none;
-  color: var(--primary-color);
-  background-color: tranparent;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.75rem;
   border: 2px solid var(--primary-color);
   border-radius: 1.5rem;
-  padding: 0.25rem 0.75rem;
-  margin-right: 0.5rem;
+  background-color: transparent;
+  text-decoration: none;
+  color: var(--primary-color);
   font-size: 1.2rem;
 }
 
 .questions__item-owner-date {
   display: block;
+  margin-bottom: 1.25rem;
   text-decoration: none;
   color: #7f7f7f;
-  margin-bottom: 1.25rem;
   font-size: 1.1rem;
 }
 
 .questions__item-answers,
 .questions__item-views {
   display: inline-block;
+  margin-right: 0.5rem;
   text-decoration: none;
   color: var(--text-primary-color);
-  margin-right: 0.5rem;
   font-size: 1.2em;
 }
 
