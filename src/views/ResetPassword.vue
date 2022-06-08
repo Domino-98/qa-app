@@ -32,7 +32,6 @@ const { value: newPassword2, errorMessage: passwordError2 } =
   useField("newPassword2");
 
 const resetPassword = handleSubmit(async (values) => {
-  console.log(route.query["/#access_token"]);
   try {
     const { error, data } = await supabase.auth.api.updateUser(
       route.query["/#access_token"],

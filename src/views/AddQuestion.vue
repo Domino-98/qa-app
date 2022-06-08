@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive } from "vue";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import { useStore } from "vuex";
@@ -50,7 +50,6 @@ const addQuestion = handleSubmit(async (values) => {
   question.name = name;
   question.content = content;
   pushToTags();
-  console.log(question);
 
   let addedQuestion = ref({});
 
@@ -76,7 +75,6 @@ const addQuestion = handleSubmit(async (values) => {
     console.log(error);
   }
   try {
-    console.log(addedQuestion.value);
     const { error, data } = await supabase.from("views").insert([
       {
         question_id: addedQuestion.value[0].id,
@@ -109,7 +107,6 @@ function pushToTags() {
 function removeFromTags(tag) {
   let tagToRemove = question.tags.indexOf(tag);
   question.tags.splice(tagToRemove, 1);
-  console.log(question);
 }
 </script>
 

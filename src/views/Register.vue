@@ -44,7 +44,6 @@ const loading = computed(() => store.state.loading);
 // Submit form
 const registerUser = handleSubmit((values) => {
   const { username, email, password } = values;
-  console.log(values);
   store.dispatch("signUpAction", { username, email, password });
 });
 

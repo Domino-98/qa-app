@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import { useForm, useField, useResetForm } from "vee-validate";
+import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import { useStore } from "vuex";
 import Loading from "vue-loading-overlay";
@@ -29,7 +29,6 @@ const loading = computed(() => store.state.loading);
 // Submit form
 const loginUser = handleSubmit((values) => {
   const { email, password } = values;
-  console.log(values);
   // Login user
   store.dispatch("signInAction", { email, password });
 });

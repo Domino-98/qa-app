@@ -18,7 +18,6 @@ let search = ref("");
 function signOut() {
   menuOpened.value = !menuOpened.value;
   store.dispatch("signOutAction");
-  console.log(user);
 }
 
 function displayError() {
@@ -358,6 +357,7 @@ function emitSearch(search) {
   margin-right: auto;
   background: -webkit-linear-gradient(rgb(0, 140, 255), rgb(0, 211, 218));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-size: 2.6rem;
   text-decoration: none;

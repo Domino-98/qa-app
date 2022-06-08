@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref } from "vue";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
 import { useRoute } from "vue-router";

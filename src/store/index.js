@@ -44,7 +44,6 @@ export default createStore({
         }
         await router.push("/");
         commit("setUser", user);
-        console.log(user);
         commit("successMsg", "Pomyślnie zalogowano!");
         setTimeout(() => {
           commit("successMsg", "");
@@ -64,7 +63,6 @@ export default createStore({
           .eq("username", form.username)
           .single();
 
-        console.log(username);
         if (username) {
           commit("errorMsg", "Podana nazwa użytkownika już istnieje!");
           setTimeout(() => {

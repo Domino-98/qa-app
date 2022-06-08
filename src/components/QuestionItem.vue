@@ -1,5 +1,4 @@
 <script setup>
-import { ref, defineProps } from "vue";
 import { supabase } from "../supabase/supabase";
 import { useStore } from "vuex";
 import timeSince from "../shared";
@@ -247,9 +246,7 @@ async function downvoteQuestion(question) {
           >{{ tag }}</a
         >
         <span v-if="question.answers" class="questions__item-answers"
-          ><span
-            >{{ question.answersWithoutParent.length }} odpowiedzi,</span
-          ></span
+          ><span>{{ question.questionAnswers.length }} odpowiedzi,</span></span
         >
         <span v-if="question.views[0]" class="questions__item-views"
           ><span>{{ question.views[0].view_count }} wyświetleń</span></span

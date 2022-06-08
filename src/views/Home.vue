@@ -1,11 +1,11 @@
 <script setup>
-import { reactive, ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { supabase } from "../supabase/supabase";
-import { useStore } from "vuex";
 import QuestionItem from "../components/QuestionItem.vue";
 import { inject } from "vue";
 
-const store = useStore();
+const emitter = inject("emitter");
+
 const user = supabase.auth.user();
 
 const questions = ref([]);
@@ -20,10 +20,11 @@ let scrolledToBottom = ref(false);
 let search = ref("");
 let searchedValue = ref("");
 
-const emitter = inject("emitter");
-
 onMounted(() => {
   window.addEventListener("scroll", handleScroll);
+  emitter.on("searchQuestions", (params) => {
+    searchQuestions(params.submitted, params.searchValue);
+  });
 });
 
 onUnmounted(() => {
@@ -36,7 +37,6 @@ const handleScroll = (e) => {
   if (element.getBoundingClientRect().bottom < window.innerHeight) {
     if (!scrolledToBottom.value) {
       scrolledToBottom.value = true;
-      console.log("bottom");
       if (activeFilter.value === "recent") getQuestions(false, "recent");
       else if (activeFilter.value === "noAnswers")
         getQuestions(false, "noAnswers");
@@ -110,10 +110,6 @@ async function getQuestions(tabClicked, filter) {
         getQuestions(false, activeFilter.value);
       }
 
-      console.log(activeFilter.value);
-
-      console.log(questions.value);
-
       updateQuestionVotes();
       filterAnswersOnly();
     }
@@ -128,20 +124,15 @@ getQuestions(false, "recent");
 // Filter answers with no parent_id
 function filterAnswersOnly() {
   questions.value.forEach((question) => {
-    question.answersWithoutParent = question.answers.filter(
+    question.questionAnswers = question.answers.filter(
       (answer) => answer.parent_id == null
     );
   });
 }
 
 // Search
-emitter.on("searchQuestions", (params) => {
-  searchQuestions(params.submitted, params.searchValue);
-});
-
 async function searchQuestions(submitted, searchValue) {
   searchedValue.value = searchValue;
-  console.log(searchedValue.value);
   if (submitted) {
     scrolledToBottom.value = false;
     questions.value = [];
@@ -177,9 +168,6 @@ async function searchQuestions(submitted, searchValue) {
       .order("created_at", { ascending: false });
 
     questions.value.push(...data);
-
-    console.log(data);
-    console.log(questions.value);
 
     updateQuestionVotes();
     filterAnswersOnly();
@@ -403,7 +391,7 @@ main {
   border-radius: 1.5rem;
   border: none;
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.25);
-  background-color: var(--accent-color);
+  background-color: var(--background-color-primary);
   font-size: 1.3rem;
   color: var(--text-primary-color);
 }
